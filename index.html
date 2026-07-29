@@ -1,0 +1,388 @@
+<title>첫맛 오매칭 모니터</title>
+<style>
+  :root {
+    --bg: #F0F4FC;
+    --surface: #FFFFFF;
+    --surface-2: #F7FAFF;
+    --text: #131B33;
+    --text-muted: #5B6580;
+    --border: #DCE4F5;
+    --accent: #1957E8;
+    --accent-soft: #E4ECFD;
+    --critical: #E0272B;
+    --critical-soft: #FCE5E5;
+    --warning: #B8860B;
+    --warning-soft: #F7EDD2;
+    --ok: #1C9A5B;
+    --ok-soft: #E0F5E9;
+    --shadow: 0 1px 2px rgba(19, 27, 51, .06), 0 1px 1px rgba(19, 27, 51, .04);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0A1122;
+      --surface: #10192F;
+      --surface-2: #15213C;
+      --text: #E8EDFC;
+      --text-muted: #8D98B8;
+      --border: #253150;
+      --accent: #5286FF;
+      --accent-soft: #16274E;
+      --critical: #FF6B6B;
+      --critical-soft: #3A1518;
+      --warning: #E0B84D;
+      --warning-soft: #3A2F12;
+      --ok: #4FD891;
+      --ok-soft: #123321;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0A1122; --surface: #10192F; --surface-2: #15213C; --text: #E8EDFC; --text-muted: #8D98B8;
+    --border: #253150; --accent: #5286FF; --accent-soft: #16274E; --critical: #FF6B6B; --critical-soft: #3A1518;
+    --warning: #E0B84D; --warning-soft: #3A2F12; --ok: #4FD891; --ok-soft: #123321;
+  }
+  :root[data-theme="light"] {
+    --bg: #F0F4FC; --surface: #FFFFFF; --surface-2: #F7FAFF; --text: #131B33; --text-muted: #5B6580;
+    --border: #DCE4F5; --accent: #1957E8; --accent-soft: #E4ECFD; --critical: #E0272B; --critical-soft: #FCE5E5;
+    --warning: #B8860B; --warning-soft: #F7EDD2; --ok: #1C9A5B; --ok-soft: #E0F5E9;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+                 "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; display: none; }
+  .wrap.unlocked { display: block; }
+
+  #loginGate {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); z-index: 100; padding: 20px;
+  }
+  #loginGate.hidden { display: none; }
+  .login-card {
+    width: 100%; max-width: 340px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 32px 28px; box-shadow: var(--shadow);
+  }
+  .login-card .eyebrow { margin-bottom: 8px; }
+  .login-card h1 { font-size: 20px; margin-bottom: 4px; }
+  .login-card .subtitle { margin-bottom: 22px; }
+  .login-field { margin-bottom: 12px; }
+  .login-field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 5px; font-weight: 600; }
+  .login-field input {
+    width: 100%; border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+    border-radius: 8px; padding: 10px 12px; font-size: 14px;
+  }
+  .login-field input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .login-submit {
+    width: 100%; border: none; background: var(--accent); color: #fff; font-weight: 700;
+    font-size: 14px; padding: 11px; border-radius: 8px; cursor: pointer; margin-top: 6px;
+  }
+  .login-submit:hover { opacity: .92; }
+  .login-error { color: var(--critical); font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+
+  header.page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 6px; }
+  h1 { font-size: 28px; font-weight: 800; letter-spacing: -.01em; margin: 0; text-wrap: balance; }
+  .subtitle { color: var(--text-muted); font-size: 14px; margin-top: 6px; }
+  .meta { text-align: right; font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .kpi {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--stripe, var(--border)); }
+  .kpi[data-kind="urgent"] { --stripe: var(--critical); }
+  .kpi[data-kind="review"] { --stripe: var(--warning); }
+  .kpi[data-kind="ok"] { --stripe: var(--ok); }
+  .kpi[data-kind="total"] { --stripe: var(--accent); }
+  .kpi-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .kpi-value { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+  .kpi-value .unit { font-size: 14px; font-weight: 600; color: var(--text-muted); margin-left: 2px; }
+
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tabs { display: flex; gap: 6px; }
+  .tab {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+    padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .tab[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .search-box {
+    border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+    padding: 7px 12px; font-size: 13px; color: var(--text); min-width: 220px;
+  }
+  .search-box:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .row {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px 14px 14px; box-shadow: var(--shadow); display: grid;
+    grid-template-columns: 4px minmax(0,1.7fr) minmax(0,1.1fr) minmax(0,.9fr) auto;
+    gap: 16px; align-items: center;
+  }
+  .row .stripe { align-self: stretch; border-radius: 3px; background: var(--border); }
+  .row[data-priority="긴급"] .stripe { background: var(--critical); }
+  .row[data-priority="아이템위너"] .stripe { background: var(--warning); }
+  .row[data-priority=""] .stripe { background: var(--ok); }
+
+  .prod-name { font-weight: 700; font-size: 14.5px; text-wrap: balance; }
+  .prod-query { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  }
+  .pill.critical { background: var(--critical-soft); color: var(--critical); }
+  .pill.warning { background: var(--warning-soft); color: var(--warning); }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .brand-cell { font-size: 13px; }
+  .brand-cell .found { font-weight: 700; }
+  .brand-cell.is-rival .found { color: var(--critical); }
+  .brand-cell .rocket { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .price-cell { font-size: 13px; font-variant-numeric: tabular-nums; }
+  .price-cell .own { font-weight: 700; }
+  .price-cell .gap { color: var(--critical); font-size: 12px; margin-top: 2px; }
+  .price-cell .gap.none { color: var(--text-muted); }
+
+  .actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn-link {
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+    text-decoration: none; font-size: 12px; font-weight: 600; padding: 7px 12px;
+    border-radius: 7px; white-space: nowrap;
+  }
+  .btn-link:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-link.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-link.primary:hover { opacity: .9; color: #fff; }
+
+  .detail-line { grid-column: 1 / -1; margin-top: 4px; padding-top: 10px; border-top: 1px dashed var(--border); }
+  .reason-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .reason-tag { font-size: 11.5px; color: var(--text-muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; }
+  .reason-tag.critical { color: var(--critical); border-color: color-mix(in srgb, var(--critical) 35%, var(--border)); background: var(--critical-soft); }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 14px; }
+
+  footer { margin-top: 40px; font-size: 12px; color: var(--text-muted); text-align: center; }
+
+  @media (max-width: 860px) {
+    .kpi-row { grid-template-columns: repeat(2, 1fr); }
+    .row { grid-template-columns: 4px 1fr; }
+    .row > *:not(.stripe):not(.prod-cell) { grid-column: 2; }
+  }
+</style>
+
+<div id="loginGate">
+  <form class="login-card" id="loginForm">
+    <p class="eyebrow">내부용 · 접근 제한</p>
+    <h1>첫맛 오매칭 모니터</h1>
+    <p class="subtitle">담당자 계정으로 로그인하세요.</p>
+    <div class="login-field">
+      <label for="loginId">아이디</label>
+      <input id="loginId" name="id" type="text" autocomplete="username" required />
+    </div>
+    <div class="login-field">
+      <label for="loginPw">비밀번호</label>
+      <input id="loginPw" name="pw" type="password" autocomplete="current-password" required />
+    </div>
+    <button class="login-submit" type="submit">로그인</button>
+    <div class="login-error" id="loginError"></div>
+  </form>
+</div>
+
+<div class="wrap" id="app">
+  <header class="page-head">
+    <div>
+      <p class="eyebrow">쿠팡 브랜드 단속 대시보드</p>
+      <h1>첫맛 오매칭 &amp; 아이템위너 모니터</h1>
+      <p class="subtitle">검색어에서 "첫맛"을 빼고 쿠팡을 검색해, 카탈로그 오매칭·경쟁사 하이재킹·최저가 이탈을 추적합니다.</p>
+    </div>
+    <div class="meta">
+      생성 시각: <span id="generatedAt"></span><br>
+      데이터 소스: report.csv (Playwright 크롤러)
+    </div>
+  </header>
+
+  <section class="kpi-row" id="kpiRow"></section>
+
+  <div class="toolbar">
+    <div class="tabs" id="tabs">
+      <button class="tab" data-filter="all" aria-pressed="true">전체</button>
+      <button class="tab" data-filter="긴급">긴급</button>
+      <button class="tab" data-filter="아이템위너">아이템위너 설정필요</button>
+      <button class="tab" data-filter="정상">정상</button>
+    </div>
+    <input class="search-box" id="searchBox" type="search" placeholder="품목명 검색..." />
+  </div>
+
+  <section class="list" id="list"></section>
+  <div class="empty-state" id="emptyState" hidden>조건에 맞는 품목이 없습니다.</div>
+
+  <footer>첫맛 내부용 모니터링 도구 · 쿠팡 검색 결과 기준(실시간 아님, 크롤링 시점 스냅샷)</footer>
+</div>
+
+<script>
+  const DATA = [{"keyword": "첫맛 8배고농축냉면육수 10kg", "searchQuery": "8배고농축냉면육수 10kg", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(청우 더진한 8배 고농축 냉면육수, 10kg, 1개)가 근접/저가로 함께 노출됨 (32010원)", "foundBrand": "첫맛 8배 고농축 냉면육수, 10kg, 1개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 55000, "rivalName": "청우 더진한 8배 고농축 냉면육수, 10kg, 1개", "rivalPrice": 32010, "rivalUrl": "https://www.coupang.com/vp/products/8747914976?itemId=26078689055&vendorItemId=93059650652", "gapPct": 41.8, "ownUrl": "https://www.coupang.com/vp/products/1736646244?itemId=7731340915&vendorItemId=94870257910", "ownName": "첫맛 8배 고농축 냉면육수, 10kg, 1개", "ownPrice": 55000, "reviewCount": 5504, "rating": "4.6", "url": "https://www.coupang.com/vp/products/1736646244?itemId=7731340915&vendorItemId=94870257910"}, {"keyword": "첫맛 꼬지소스 매운맛 10kg", "searchQuery": "꼬지소스 매운맛 10kg", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(원하프꼬지소스(매운맛)10kg/청우총알배송,10kg, 1개)가 근접/저가로 함께 노출됨 (39170원)", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 43800, "rivalName": "원하프꼬지소스(매운맛)10kg/청우총알배송,10kg, 1개", "rivalPrice": 39170, "rivalUrl": "https://www.coupang.com/vp/products/9304811095?itemId=27566314942&vendorItemId=93188226630", "gapPct": 10.6, "ownUrl": "https://www.coupang.com/vp/products/9534035821?itemId=17060050269&vendorItemId=92672157830", "ownName": "첫맛꼬지소스매운맛,10kg, 1개", "ownPrice": 43800, "reviewCount": 2738, "rating": "4.7", "url": "https://www.coupang.com/vp/products/9534035821?itemId=17060050269&vendorItemId=92672157830"}, {"keyword": "첫맛 꼬지소스 순한맛 10kg", "searchQuery": "꼬지소스 순한맛 10kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 43800, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/7675026136?itemId=244882&vendorItemId=92836247093", "ownName": "첫맛 꼬지 소스 순한맛, 10kg, 1개", "ownPrice": 43800, "reviewCount": 59, "rating": "4.9", "url": "https://www.coupang.com/vp/products/7675026136?itemId=244882&vendorItemId=92836247093"}, {"keyword": "첫맛 닭강정매운맛소스 10kg", "searchQuery": "닭강정매운맛소스 10kg", "status": "오매칭 의심", "priority": "긴급", "mismatch": "O", "detail": "[긴급] 경쟁사(청우 더진한)가 우리 자리에 매칭됨 (기대:첫맛)", "foundBrand": "청우 더진한 닭강정 매운맛소스 10kg, 1개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 33880, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/6612871854?itemId=16696281949&vendorItemId=91189850813", "ownName": "첫맛 닭강정소스 매운맛, 10kg, 1개", "ownPrice": 56600, "reviewCount": 5, "rating": "5", "url": "https://www.coupang.com/vp/products/9513870563?itemId=28353443530&vendorItemId=80564975078"}, {"keyword": "첫맛 닭강정순한맛소스 10kg", "searchQuery": "닭강정순한맛소스 10kg", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(청우 더진한 닭강정 순한맛소스, 10kg, 1개)가 근접/저가로 함께 노출됨 (30490원)", "foundBrand": "첫맛 닭강정 소스 순한맛, 10kg, 1개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 40800, "rivalName": "청우 더진한 닭강정 순한맛소스, 10kg, 1개", "rivalPrice": 30490, "rivalUrl": "https://www.coupang.com/vp/products/9320342408?itemId=27624172732&vendorItemId=93485930040", "gapPct": 25.3, "ownUrl": "https://www.coupang.com/vp/products/6614533666?itemId=26461909932&vendorItemId=94538362714", "ownName": "첫맛 닭강정 소스 순한맛, 10kg, 1개", "ownPrice": 40800, "reviewCount": 434, "rating": "4.7", "url": "https://www.coupang.com/vp/products/6614533666?itemId=26461909932&vendorItemId=94538362714"}, {"keyword": "첫맛 만능멸치육수 10kg", "searchQuery": "만능멸치육수 10kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "청우식품", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 58800, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/6352727510?itemId=13374556164&vendorItemId=92671907151", "ownName": "첫맛 만능 멸치육수, 10kg, 1개", "ownPrice": 58800, "reviewCount": 39485, "rating": "4.8", "url": "https://www.coupang.com/vp/products/6352727510?itemId=13374556164&vendorItemId=92671907151"}, {"keyword": "첫맛 모밀소스 10kg", "searchQuery": "모밀소스 10kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "청우모밀소스,10kg, 1개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 58800, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/6613104177?itemId=23394664473&vendorItemId=92983725425", "ownName": "첫맛 모밀소스, 2.1kg, 4개", "ownPrice": 76000, "reviewCount": 20, "rating": "5", "url": "https://www.coupang.com/vp/products/5319024227?itemId=7731340734&vendorItemId=91779931221"}, {"keyword": "첫맛 양념치킨매운맛소스 10kg", "searchQuery": "양념치킨매운맛소스 10kg", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(청우 더진한 양념치킨소스 매운맛, 10kg, 1개)가 근접/저가로 함께 노출됨 (34000원)", "foundBrand": "청우식품 더진한 양념치킨소스 매운맛 10kg, 1개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 36430, "rivalName": "청우 더진한 양념치킨소스 매운맛, 10kg, 1개", "rivalPrice": 34000, "rivalUrl": "https://www.coupang.com/vp/products/9444886685?itemId=28094158777&vendorItemId=95050443503", "gapPct": 6.7, "ownUrl": "https://www.coupang.com/vp/products/7208677650?itemId=28883673336&vendorItemId=95817169198", "ownName": "첫맛양념치킨매운맛소스, 1개,10kg", "ownPrice": 66600, "reviewCount": 160, "rating": "4.8", "url": "https://www.coupang.com/vp/products/2438832?itemId=25350263298&vendorItemId=92047101745"}, {"keyword": "첫맛 양념치킨순한맛소스 10kg", "searchQuery": "양념치킨순한맛소스 10kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "청우식품 양념치킨 순한맛 소스, 10kg, 1개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 30350, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/9334619067?itemId=28697166096&vendorItemId=95641345410", "ownName": "첫맛 양념치킨 순한맛소스, 10kg, 1개", "ownPrice": 63300, "reviewCount": 5904, "rating": "4.7", "url": "https://www.coupang.com/vp/products/135604?itemId=27595253997&vendorItemId=95816378722"}, {"keyword": "첫맛 8배고농축냉면육수 2.1kg", "searchQuery": "8배고농축냉면육수 2.1kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 13000, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/1736646244?itemId=2956073795&vendorItemId=93032340902", "ownName": "첫맛 8배 고농축 냉면육수, 2.1kg, 1개", "ownPrice": 13000, "reviewCount": 5504, "rating": "4.6", "url": "https://www.coupang.com/vp/products/1736646244?itemId=2956073795&vendorItemId=93032340902"}, {"keyword": "첫맛 8배고농축냉면육수 1.1kg", "searchQuery": "8배고농축냉면육수 1.1kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 7900, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/1736646244?itemId=21817337602&vendorItemId=95231440144", "ownName": "첫맛 8배 고농축 냉면육수, 1.1kg, 1개", "ownPrice": 7900, "reviewCount": 5504, "rating": "4.6", "url": "https://www.coupang.com/vp/products/1736646244?itemId=21817337602&vendorItemId=95231440144"}, {"keyword": "첫맛 꼬지소스 매운맛 2.1kg", "searchQuery": "꼬지소스 매운맛 2.1kg", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(청우 더진한꼬지소스매운맛2.1kg1개,2.1kg)가 근접/저가로 함께 노출됨 (8350원)", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 13000, "rivalName": "청우 더진한꼬지소스매운맛2.1kg1개,2.1kg", "rivalPrice": 8350, "rivalUrl": "https://www.coupang.com/vp/products/8180240512?itemId=28723952925&vendorItemId=3887292661", "gapPct": 35.8, "ownUrl": "https://www.coupang.com/vp/products/9534035821?itemId=21288603074&vendorItemId=92836011450", "ownName": "첫맛꼬지소스매운맛,2.1kg, 1개", "ownPrice": 13000, "reviewCount": 2738, "rating": "4.7", "url": "https://www.coupang.com/vp/products/9534035821?itemId=21288603074&vendorItemId=92836011450"}, {"keyword": "첫맛 꼬지소스 매운맛 460g", "searchQuery": "꼬지소스 매운맛 460g", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "청우꼬지소스매운맛460g, 1개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 3800, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/9534035821?itemId=21288603074&vendorItemId=92836011450", "ownName": "첫맛 꼬지소스 매운맛, 2.1kg, 1개", "ownPrice": 13000, "reviewCount": 163, "rating": "4.6", "url": "https://www.coupang.com/vp/products/1736646260?itemId=25691856118&vendorItemId=70188716912"}, {"keyword": "첫맛 꼬지소스 매운맛 540g", "searchQuery": "꼬지소스 매운맛 540g", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 6560, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/9534035821?itemId=28434334865&vendorItemId=92681025691", "ownName": "첫맛꼬지소스매운맛,540g, 1개", "ownPrice": 6560, "reviewCount": 2738, "rating": "4.7", "url": "https://www.coupang.com/vp/products/9534035821?itemId=28434334865&vendorItemId=92681025691"}, {"keyword": "첫맛 꼬지소스 순한맛 2.1kg", "searchQuery": "꼬지소스 순한맛 2.1kg", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(업소용 벌크 대용량 식자재 청우꼬지소스(순한맛)2.1kg, 1개)가 근접/저가로 함께 노출됨 (12050원)", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 13000, "rivalName": "업소용 벌크 대용량 식자재 청우꼬지소스(순한맛)2.1kg, 1개", "rivalPrice": 12050, "rivalUrl": "https://www.coupang.com/vp/products/8776193111?itemId=28744994374&vendorItemId=95684147525", "gapPct": 7.3, "ownUrl": "https://www.coupang.com/vp/products/9534146120?itemId=2956074138&vendorItemId=92837674550", "ownName": "첫맛 꼬지 소스 순한맛, 2.1kg, 1개", "ownPrice": 13000, "reviewCount": 2442, "rating": "4.7", "url": "https://www.coupang.com/vp/products/9534146120?itemId=2956074138&vendorItemId=92837674550"}, {"keyword": "첫맛 꼬지소스 순한맛 460g", "searchQuery": "꼬지소스 순한맛 460g", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(청우 꼬지소스 매운맛 460g, 1개)가 근접/저가로 함께 노출됨 (3800원)", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 5640, "rivalName": "청우 꼬지소스 매운맛 460g, 1개", "rivalPrice": 3800, "rivalUrl": "https://www.coupang.com/vp/products/1736646260?itemId=25691856118&vendorItemId=70188716912", "gapPct": 32.6, "ownUrl": "https://www.coupang.com/vp/products/9534146120?itemId=25691444886&vendorItemId=92680683241", "ownName": "첫맛꼬지소스순한맛,460g, 1개", "ownPrice": 5640, "reviewCount": 2442, "rating": "4.7", "url": "https://www.coupang.com/vp/products/9534146120?itemId=25691444886&vendorItemId=92680683241"}, {"keyword": "첫맛 꼬지소스 순한맛 540g", "searchQuery": "꼬지소스 순한맛 540g", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "청우꼬지소스순한맛,540g, 1개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 5900, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/9534146120?itemId=2956074138&vendorItemId=92837674550", "ownName": "첫맛 꼬지 소스 순한맛, 2.1kg, 1개", "ownPrice": 13000, "reviewCount": 39, "rating": "4.5", "url": "https://www.coupang.com/vp/products/9604351183?itemId=28671492151&vendorItemId=95296164381"}, {"keyword": "첫맛 닭강정매운맛소스 2.1kg", "searchQuery": "닭강정매운맛소스 2.1kg", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(청우식품 양념치킨 매운맛소스, 2.1kg, 1개)가 근접/저가로 함께 노출됨 (10600원)", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 13000, "rivalName": "청우식품 양념치킨 매운맛소스, 2.1kg, 1개", "rivalPrice": 10600, "rivalUrl": "https://www.coupang.com/vp/products/9334600281?itemId=18433017613&vendorItemId=92835717425", "gapPct": 18.5, "ownUrl": "https://www.coupang.com/vp/products/6612871854?itemId=15002445264&vendorItemId=92993186821", "ownName": "첫맛 닭강정 매운맛 소스, 2.1kg, 1개", "ownPrice": 13000, "reviewCount": 234, "rating": "4.7", "url": "https://www.coupang.com/vp/products/6612871854?itemId=15002445264&vendorItemId=92993186821"}, {"keyword": "첫맛 닭강정순한맛소스 2.1kg", "searchQuery": "닭강정순한맛소스 2.1kg", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(청우 더진한 닭강정 소스 순한맛, 2.1kg, 1개)가 근접/저가로 함께 노출됨 (9690원)", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 13000, "rivalName": "청우 더진한 닭강정 소스 순한맛, 2.1kg, 1개", "rivalPrice": 9690, "rivalUrl": "https://www.coupang.com/vp/products/9091471527?itemId=26718186729&vendorItemId=92260265927", "gapPct": 25.5, "ownUrl": "https://www.coupang.com/vp/products/6614533666?itemId=15013328510&vendorItemId=92837030001", "ownName": "첫맛 닭강정 순한맛 소스, 2.1kg, 1개", "ownPrice": 13000, "reviewCount": 434, "rating": "4.7", "url": "https://www.coupang.com/vp/products/6614533666?itemId=15013328510&vendorItemId=92837030001"}, {"keyword": "첫맛 만능멸치육수 1.95kg", "searchQuery": "만능멸치육수 1.95kg", "status": "아이템위너 설정필요", "priority": "아이템위너", "mismatch": "O", "detail": "경쟁사(만능멸치육수1.95KG(주)청우식품, 1개,1.95kg)가 근접/저가로 함께 노출됨 (17440원)", "foundBrand": "청우식품", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 17800, "rivalName": "만능멸치육수1.95KG(주)청우식품, 1개,1.95kg", "rivalPrice": 17440, "rivalUrl": "https://www.coupang.com/vp/products/4737420079?itemId=26005022688&vendorItemId=91559959695", "gapPct": 2.0, "ownUrl": "https://www.coupang.com/vp/products/6352727510?itemId=18771947994&vendorItemId=92975705650", "ownName": "첫맛 만능 멸치육수, 1.95kg, 1개", "ownPrice": 17800, "reviewCount": 39485, "rating": "4.8", "url": "https://www.coupang.com/vp/products/6352727510?itemId=18771947994&vendorItemId=92975705650"}, {"keyword": "첫맛 만능멸치육수 1kg", "searchQuery": "만능멸치육수 1kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "청우식품", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 20800, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/6352727510?itemId=18908549202&vendorItemId=92985987925", "ownName": "첫맛 만능 멸치육수, 1kg, 2개", "ownPrice": 20800, "reviewCount": 39485, "rating": "4.8", "url": "https://www.coupang.com/vp/products/6352727510?itemId=18908549202&vendorItemId=92985987925"}, {"keyword": "첫맛 만능멸치육수 500g", "searchQuery": "만능멸치육수 500g", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "첫맛 만능 멸치육수, 500g, 1개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 5200, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/6352727510?itemId=20809440584&vendorItemId=91010015558", "ownName": "첫맛 만능 멸치육수, 500g, 1개", "ownPrice": 5200, "reviewCount": 39485, "rating": "4.8", "url": "https://www.coupang.com/vp/products/6352727510?itemId=20809440584&vendorItemId=91010015558"}, {"keyword": "첫맛 모밀소스 1.05kg", "searchQuery": "모밀소스 1.05kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "첫맛", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 8900, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/6613104177?itemId=2956074231&vendorItemId=92811519274", "ownName": "첫맛모밀소스,1.05kg, 1개", "ownPrice": 8900, "reviewCount": 4270, "rating": "4.7", "url": "https://www.coupang.com/vp/products/6613104177?itemId=2956074231&vendorItemId=92811519274"}, {"keyword": "첫맛 모밀소스 2.1kg", "searchQuery": "모밀소스 2.1kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "천일식품", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 9850, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/6613104177?itemId=20446056190&vendorItemId=92848369545", "ownName": "첫맛모밀소스,2.1kg, 1개", "ownPrice": 19000, "reviewCount": 9, "rating": "4", "url": "https://www.coupang.com/vp/products/9542939362?itemId=28467023719&vendorItemId=95417359908"}, {"keyword": "첫맛 양념치킨매운맛소스 440g", "searchQuery": "양념치킨매운맛소스 440g", "status": "오매칭 의심", "priority": "긴급", "mismatch": "O", "detail": "[긴급] 경쟁사(청우 더진한)가 우리 자리에 매칭됨 (기대:첫맛)", "foundBrand": "청우 더진한 양념치킨 소스 매운맛, 440g, 2개", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 9900, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/9334600281?itemId=28486296856&vendorItemId=93324570999", "ownName": "첫맛 양념치킨 매운맛소스, 440g, 2개", "ownPrice": 8800, "reviewCount": 132, "rating": "4.7", "url": "https://www.coupang.com/vp/products/9278937239?itemId=25627660987&vendorItemId=92270148339"}, {"keyword": "첫맛 양념치킨매운맛소스 530g", "searchQuery": "양념치킨매운맛소스 530g", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "청우식품", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 4870, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/9334600281?itemId=28486294605&vendorItemId=93317164827", "ownName": "첫맛 양념치킨 매운맛소스, 530g, 1개", "ownPrice": 4870, "reviewCount": 3745, "rating": "4.6", "url": "https://www.coupang.com/vp/products/9334600281?itemId=28486294605&vendorItemId=93317164827"}, {"keyword": "첫맛 양념치킨매운맛소스 2.1kg", "searchQuery": "양념치킨매운맛소스 2.1kg", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "청우식품", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 10600, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/9534035821?itemId=21288603074&vendorItemId=92836011450", "ownName": "첫맛 꼬지소스 매운맛, 2.1kg, 1개", "ownPrice": 13000, "reviewCount": 3745, "rating": "4.6", "url": "https://www.coupang.com/vp/products/9334600281?itemId=18433017613&vendorItemId=92835717425"}, {"keyword": "첫맛 양념치킨순한맛소스 440g", "searchQuery": "양념치킨순한맛소스 440g", "status": "정상", "priority": "", "mismatch": "X", "detail": "", "foundBrand": "청우식품", "expectedBrand": "첫맛", "rocket": "Y", "outOfStock": "N", "price": 5490, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "https://www.coupang.com/vp/products/135604?itemId=18267853181&vendorItemId=93339586641", "ownName": "청우식품 치킨소스 순한맛, 440g, 1개", "ownPrice": 5490, "reviewCount": 5904, "rating": "4.7", "url": "https://www.coupang.com/vp/products/135604?itemId=18267853181&vendorItemId=93339586641"}, {"keyword": "첫맛 양념치킨순한맛소스 530g", "searchQuery": "", "status": "오류", "priority": "", "mismatch": "확인불가", "detail": "검색 페이지 로드 실패 (status=403)", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 양념치킨순한맛소스2.1kg", "searchQuery": "", "status": "오류", "priority": "", "mismatch": "확인불가", "detail": "검색 페이지 로드 실패 (status=403)", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 가쓰오진국 2kg", "searchQuery": "", "status": "오류", "priority": "", "mismatch": "확인불가", "detail": "검색 페이지 로드 실패 (status=403)", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 겨자머스타드소스 1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 돈까스소스 1.9kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 돈까스소스 990g", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 떡볶이양념분말 매운맛 1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 떡볶이양념분말 매운맛 500g", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 떡볶이양념분말 순한맛 1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 떡볶이양념분말 순한맛 500g", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 마늘간장소스 1.05kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 만능불볶음양념 2kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 만능불볶음양념 1.05kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 만능비빔무침양념 1.1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 만능비빔무침양념 2.2kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 만능비빔무침양념 330g", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 만능비빔무침양념 550g", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 만능파절이소스 1.9kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 파절이소스 970g", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 만능해물육수 1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 매운닭발양념 2kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 스위트칠리소스 2.05kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 오뎅탕육수진국 1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 요리맛술 2kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 우동다시 2kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 정통데리야끼양념 1.9kg (페트)", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 쭈꾸미볶음양념 2.1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 치킨스톡 1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 캡사이신매운맛소스 2kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 캡사이신매운맛소스 550g", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 캡사이신분말 1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 캡사이신분말 400g", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 케이준드레싱소스 1.7kg (페트)", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 타르타르드레싱소스 1.75kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 탕수육소스 1.85kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 핫바베큐소스 2.05kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 해파리겨자냉채소스 880g", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 허니머스타드소스 1.85kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 돼지갈비양념 1.95kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 돼지갈비양념 10kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 돼지불고기양념 10kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 돼지불고기양념 2.1kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 떡볶이비법양념 2.1kg (페트)", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 떡볶이양념 10kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 바베큐소스 10kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 소갈비양념 1.95kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 소갈비양념 10kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 소불고기양념 10kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 소불고기양념 2kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}, {"keyword": "첫맛 캡사이신매운맛소스 10kg", "searchQuery": "", "status": "미실행", "priority": "", "mismatch": "확인불가", "detail": "차단으로 인해 중단됨", "foundBrand": "", "expectedBrand": "첫맛", "rocket": "", "outOfStock": "", "price": null, "rivalName": "", "rivalPrice": null, "rivalUrl": "", "gapPct": null, "ownUrl": "", "ownName": "", "ownPrice": null, "reviewCount": null, "rating": "", "url": ""}];
+
+  document.getElementById("generatedAt").textContent = new Date().toLocaleString("ko-KR");
+
+  // 참고: 정적 페이지의 클라이언트 측 게이트입니다. 실제 서버 인증이 아니라
+  // 링크를 아는 아무나 바로 열지 못하게 막는 수준의 간단한 접근 제한입니다.
+  const AUTH_ID = "echungwoo";
+  const AUTH_PW = "dlcjddn1004!";
+  const SESSION_KEY = "cw_dashboard_auth";
+
+  function unlock() {
+    document.getElementById("loginGate").classList.add("hidden");
+    document.getElementById("app").classList.add("unlocked");
+  }
+
+  if (sessionStorage.getItem(SESSION_KEY) === "1") {
+    unlock();
+  }
+
+  document.getElementById("loginForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const id = document.getElementById("loginId").value.trim();
+    const pw = document.getElementById("loginPw").value;
+    if (id === AUTH_ID && pw === AUTH_PW) {
+      sessionStorage.setItem(SESSION_KEY, "1");
+      unlock();
+    } else {
+      document.getElementById("loginError").textContent = "아이디 또는 비밀번호가 올바르지 않습니다.";
+    }
+  });
+
+  const fmt = (n) => n == null ? "-" : n.toLocaleString("ko-KR");
+
+  function kpi(kind, label, value, unit) {
+    return `<div class="kpi" data-kind="${kind}"><div class="kpi-label">${label}</div>` +
+      `<div class="kpi-value">${value}<span class="unit">${unit || ""}</span></div></div>`;
+  }
+
+  function renderKpis() {
+    const total = DATA.length;
+    const urgent = DATA.filter(d => d.priority === "긴급").length;
+    const itemWinner = DATA.filter(d => d.priority === "아이템위너").length;
+    const ok = DATA.filter(d => d.status === "정상").length;
+    document.getElementById("kpiRow").innerHTML = [
+      kpi("total", "총 검사 품목", fmt(total), "건"),
+      kpi("urgent", "오매칭 의심 (경쟁사 매칭)", fmt(urgent), "건"),
+      kpi("review", "아이템위너 설정필요", fmt(itemWinner), "건"),
+      kpi("ok", "정상", fmt(ok), "건"),
+    ].join("");
+  }
+
+  function priorityPill(item) {
+    if (item.priority === "긴급") return `<span class="pill critical">긴급</span>`;
+    if (item.priority === "아이템위너") return `<span class="pill warning">아이템위너 설정필요</span>`;
+    return `<span class="pill ok">정상</span>`;
+  }
+
+  function reasonTags(item) {
+    if (!item.detail) return "";
+    const parts = item.detail.split(" / ").filter(Boolean);
+    const tags = parts.map(p => {
+      const cls = p.startsWith("[긴급]") ? "reason-tag critical" : "reason-tag";
+      return `<span class="${cls}">${escapeHtml(p)}</span>`;
+    }).join("");
+    return `<div class="detail-line"><div class="reason-tags">${tags}</div></div>`;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function renderRow(item) {
+    const isRival = item.priority === "긴급";
+    const gap = item.gapPct != null
+      ? `<div class="gap">경쟁사 대비 +${item.gapPct}% (${fmt(item.rivalPrice)}원, ${escapeHtml(item.rivalName)})</div>`
+      : `<div class="gap none">경쟁사 미노출</div>`;
+    const rocket = item.rocket === "Y" ? "로켓배송 O" : "로켓배송 X";
+    return `
+      <div class="row" data-priority="${item.priority}">
+        <div class="stripe"></div>
+        <div class="prod-cell">
+          <div class="prod-name">${escapeHtml(item.keyword)}</div>
+          <div class="prod-query">검색어: "${escapeHtml(item.searchQuery)}" · 리뷰 ${fmt(item.reviewCount)}개 · 평점 ${item.rating || "-"}</div>
+        </div>
+        <div class="brand-cell ${isRival ? "is-rival" : ""}">
+          ${priorityPill(item)}
+          <div class="found">${escapeHtml(item.foundBrand || "(표시 없음)")}</div>
+          <div class="rocket">${rocket}${item.outOfStock === "Y" ? " · 품절" : ""}</div>
+        </div>
+        <div class="price-cell">
+          <div class="own">${item.price ? fmt(item.price) + "원" : "-"}</div>
+          ${gap}
+        </div>
+        <div class="actions">
+          ${renderActions(item, isRival)}
+        </div>
+        ${reasonTags(item)}
+      </div>`;
+  }
+
+  function renderActions(item, isRival) {
+    const sameAsTop = item.ownUrl && item.ownUrl === item.url;
+    const btns = [];
+    if (item.ownUrl) {
+      btns.push(`<a class="btn-link primary" href="${item.ownUrl}" target="_blank" rel="noopener">우리 상품 보기</a>`);
+    } else {
+      btns.push(`<span class="btn-link" style="opacity:.55;cursor:default;">우리 상품 미확인</span>`);
+    }
+    if (!sameAsTop) {
+      const label = isRival ? "경쟁사 매칭 확인" : "현재 매칭 상품";
+      btns.push(`<a class="btn-link" href="${item.url}" target="_blank" rel="noopener">${label}</a>`);
+    }
+    if (!isRival && item.rivalUrl) {
+      btns.push(`<a class="btn-link" href="${item.rivalUrl}" target="_blank" rel="noopener">경쟁상품 보기</a>`);
+    }
+    return btns.join("");
+  }
+
+  let currentFilter = "all";
+  let currentQuery = "";
+
+  function applyFilter() {
+    let rows = DATA;
+    if (currentFilter !== "all") {
+      rows = rows.filter(d => currentFilter === "정상" ? d.status === "정상" : d.priority === currentFilter);
+    }
+    if (currentQuery) {
+      const q = currentQuery.toLowerCase();
+      rows = rows.filter(d => d.keyword.toLowerCase().includes(q));
+    }
+    const priorityOrder = { "긴급": 0, "아이템위너": 1, "": 2 };
+    rows = [...rows].sort((a, b) => (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2));
+
+    const list = document.getElementById("list");
+    const empty = document.getElementById("emptyState");
+    if (rows.length === 0) {
+      list.innerHTML = "";
+      empty.hidden = false;
+    } else {
+      empty.hidden = true;
+      list.innerHTML = rows.map(renderRow).join("");
+    }
+  }
+
+  document.getElementById("tabs").addEventListener("click", (e) => {
+    const btn = e.target.closest(".tab");
+    if (!btn) return;
+    document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-pressed", "false"));
+    btn.setAttribute("aria-pressed", "true");
+    currentFilter = btn.dataset.filter;
+    applyFilter();
+  });
+
+  document.getElementById("searchBox").addEventListener("input", (e) => {
+    currentQuery = e.target.value.trim();
+    applyFilter();
+  });
+
+  renderKpis();
+  applyFilter();
+</script>
