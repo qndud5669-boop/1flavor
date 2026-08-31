@@ -191,6 +191,7 @@
     background: var(--surface-sunken); padding: 11px 14px; border-bottom: 1px solid var(--border); white-space: nowrap;
   }
   tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody td.product-name { white-space: nowrap; }
   tbody tr:last-child td { border-bottom: none; }
   tbody tr { transition: background .1s; }
   tbody tr:hover { background: var(--surface-sunken); }
@@ -820,7 +821,7 @@
       var statusTitle = "최근 " + STOCKOUT_RISK_DAYS + "일 출고 " + item.recent7d + "개 · 최근 " + WARN_RISK_DAYS + "일 출고 " + item.recent30d + "개";
       return "<tr>" +
         '<td><span class="pill ' + item.status + '" title="' + statusTitle + '">' + statusLabel + "</span></td>" +
-        "<td>" + escapeHtml(item.name || "(이름없음)") + "</td>" +
+        '<td class="product-name">' + escapeHtml(item.name || "(이름없음)") + "</td>" +
         '<td class="mono">' + item.barcode + "</td>" +
         '<td class="mono">' + item.baseline + "</td>" +
         '<td class="mono">' + item.outbound + "</td>" +
