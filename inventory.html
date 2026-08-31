@@ -609,6 +609,12 @@
 
   var STOCKOUT_RISK_DAYS = 7; // 최근 N일 출고량을 앞으로 N일 예상 수요로 보고 재고 위험 판정
 
+  // 품번(바코드)이 파일마다 다르게 찍히는 경우가 많아서, 품목명(공백/괄호 무시)을 우선 기준으로 매칭.
+  // 바코드가 정확히 일치하면 그걸 쓰고, 안 맞으면 이름으로 기초재고 품목을 찾아 거기에 합침.
+  function normalizeProductName(name) {
+    return String(name || "").replace(/\s+/g, "").replace(/[()]/g, "").toLowerCase();
+  }
+
   function computeStock() {
     var map = {};
     if (!state.baseline) return [];
@@ -616,34 +622,45 @@
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - (STOCKOUT_RISK_DAYS - 1));
     var cutoff = sevenDaysAgo.getFullYear() + "-" + String(sevenDaysAgo.getMonth() + 1).padStart(2, "0") + "-" + String(sevenDaysAgo.getDate()).padStart(2, "0");
 
+    var nameIndex = {};
     Object.keys(state.baseline.items).forEach(function (barcode) {
       var b = state.baseline.items[barcode];
       map[barcode] = { barcode: barcode, name: b.name, baseline: b.qty, warnQty: b.warnQty, dangerQty: b.dangerQty, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
+      var norm = normalizeProductName(b.name);
+      if (norm && !nameIndex[norm]) nameIndex[norm] = barcode;
     });
+    function resolveKey(barcode, name) {
+      if (map[barcode]) return barcode;
+      var norm = normalizeProductName(name);
+      if (norm && nameIndex[norm]) return nameIndex[norm];
+      return barcode;
+    }
     state.outboundBatches.forEach(function (batch) {
       batch.rows.forEach(function (r) {
-        if (!map[r.barcode]) map[r.barcode] = { barcode: r.barcode, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
-        map[r.barcode].outbound += r.qty;
-        if (r.date && r.date >= cutoff) map[r.barcode].recent7d += r.qty;
-        if (r.name && !map[r.barcode].name) map[r.barcode].name = r.name;
+        var key = resolveKey(r.barcode, r.name);
+        if (!map[key]) map[key] = { barcode: key, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
+        map[key].outbound += r.qty;
+        if (r.date && r.date >= cutoff) map[key].recent7d += r.qty;
+        if (r.name && !map[key].name) map[key].name = r.name;
       });
     });
     state.inboundBatches.forEach(function (batch) {
       batch.rows.forEach(function (r) {
-        if (!map[r.barcode]) map[r.barcode] = { barcode: r.barcode, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
-        map[r.barcode].inbound += r.qty;
-        if (r.name && !map[r.barcode].name) map[r.barcode].name = r.name;
+        var key = resolveKey(r.barcode, r.name);
+        if (!map[key]) map[key] = { barcode: key, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
+        map[key].inbound += r.qty;
+        if (r.name && !map[key].name) map[key].name = r.name;
         if (r.expiry) {
-          map[r.barcode].expiries.push({ date: r.expiry, qty: r.qty });
+          map[key].expiries.push({ date: r.expiry, qty: r.qty });
         } else if (r.lots && r.lots.length) {
           if (r.lots.length === 1 && r.lots[0].boxes == null && r.lots[0].units == null) {
             // 비고에 날짜 하나만 있고 수량 표기가 없으면 그 행 전체 수량이 그 날짜 소비기한
-            map[r.barcode].expiries.push({ date: r.lots[0].date, qty: r.qty });
+            map[key].expiries.push({ date: r.lots[0].date, qty: r.qty });
           } else {
-            var perBox = UNITS_PER_BOX[r.barcode];
+            var perBox = UNITS_PER_BOX[key];
             r.lots.forEach(function (lot) {
               var lotQty = lot.units != null ? lot.units : (lot.boxes != null && perBox ? lot.boxes * perBox : null);
-              map[r.barcode].expiries.push({ date: lot.date, qty: lotQty, boxes: lot.boxes });
+              map[key].expiries.push({ date: lot.date, qty: lotQty, boxes: lot.boxes });
             });
           }
         }
