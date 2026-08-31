@@ -701,13 +701,23 @@
           });
         }
         v.expiries.sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
-        // 소비기한별 수량이 하나만 비어있으면, 나머지 로트 합을 현재고에서 뺀 나머지를 그 자리에 채워넣음
-        // (로트별 수량의 합 = 현재고 가 항상 성립하도록. 비어있는 로트가 2개 이상이면 나눌 방법이 없어 그대로 둠)
+        // 소비기한별 수량이 하나만 비어있으면, 나머지 로트(기초재고+누적입고 총량 기준) 합을 뺀 나머지로 채움
+        // (비어있는 로트가 2개 이상이면 나눌 방법이 없어 그대로 둠)
+        var grossTotal = v.baseline + v.inbound;
         var missingQtyLots = v.expiries.filter(function (e) { return e.qty === null || e.qty === undefined; });
         if (missingQtyLots.length === 1) {
-          var knownSum = v.expiries.reduce(function (s, e) { return s + (e.qty || 0); }, 0);
-          missingQtyLots[0].qty = v.remaining - knownSum;
+          var knownGrossSum = v.expiries.reduce(function (s, e) { return s + (e.qty || 0); }, 0);
+          missingQtyLots[0].qty = grossTotal - knownGrossSum;
         }
+        // 출고는 소비기한이 가장 빠른 로트부터 순서대로 차감(선입선출) - 로트별 합이 항상 현재고와 일치하도록 유지
+        var toConsume = v.outbound;
+        v.expiries.forEach(function (lot) {
+          if (lot.qty == null || toConsume <= 0) return;
+          var deduct = Math.min(lot.qty, toConsume);
+          lot.qty -= deduct;
+          toConsume -= deduct;
+        });
+        v.expiries = v.expiries.filter(function (e) { return e.qty === null || e.qty === undefined || e.qty > 0; });
         v.nearestExpiryDays = v.expiries.length ? expiryDays(v.expiries[0].date) : null;
         return v;
       });
