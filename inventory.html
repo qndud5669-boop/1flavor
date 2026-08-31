@@ -173,6 +173,7 @@
     background: var(--surface); margin-bottom: 20px; transition: border-color .15s, background .15s;
   }
   .upload-box:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .upload-box.drag-over { border-color: var(--accent); background: var(--accent-soft); border-style: solid; }
   .upload-box .btn {
     display: inline-block; background: var(--accent); color: #fff; font-weight: 700; font-size: 13.5px;
     padding: 10px 20px; border-radius: 9px; cursor: pointer; border: none; letter-spacing: 0.01em;
@@ -230,7 +231,7 @@
   .edit-expiry-link:hover { filter: brightness(0.95); }
 
   .modal-overlay {
-    position: fixed; inset: 0; background: rgba(20,18,14,0.55); backdrop-filter: blur(2px);
+    position: fixed; inset: 0; background: rgba(20,18,14,0.55); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
     display: flex; align-items: center; justify-content: center; z-index: 200; animation: fade-in .15s ease;
   }
   .modal-card { background: var(--surface); border-radius: 16px; padding: 26px; width: 380px; max-width: calc(100vw - 40px); box-shadow: var(--shadow-lift); border: 1px solid var(--border); }
@@ -242,15 +243,15 @@
   .lot-remove { font-size: 16px; line-height: 1; color: var(--danger); background: none; border: none; cursor: pointer; padding: 3px 7px; border-radius: 6px; transition: background .15s; }
   .lot-remove:hover { background: var(--danger-soft); }
   .lot-empty { font-size: 12.5px; color: var(--ink-faint); padding: 10px 0; }
-  .lot-add-row { display: flex; gap: 6px; margin-top: 16px; }
+  .lot-add-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
   .lot-add-row input {
     padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface-sunken); color: var(--ink); font-size: 13px;
-    transition: border-color .15s;
+    transition: border-color .15s; min-width: 0;
   }
   .lot-add-row input:focus { border-color: var(--accent); outline: none; }
-  .lot-add-row input.date-input { flex: 1.4; }
-  .lot-add-row input.qty-input { flex: 1; }
-  .lot-add-row button { padding: 8px 15px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; transition: filter .15s; }
+  .lot-add-row input.date-input { flex: 1 1 130px; }
+  .lot-add-row input.qty-input { flex: 1 1 90px; }
+  .lot-add-row button { flex: 1 0 100%; padding: 9px 15px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; transition: filter .15s; white-space: nowrap; }
   .lot-add-row button:hover { filter: brightness(1.08); }
   .modal-close { width: 100%; margin-top: 18px; padding: 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-soft); font-size: 13.5px; cursor: pointer; transition: background .15s; }
   .modal-close:hover { background: var(--surface-sunken); }
@@ -297,10 +298,10 @@
     <section class="tab-panel active" id="panel-stock">
       <div class="stat-row" id="stock-stats"></div>
 
-      <div class="upload-box">
+      <div class="upload-box" id="baseline-upload-box">
         <label class="btn" for="baseline-file">기초재고 새로 설정 (이지어드민 현재고 엑셀 업로드)</label>
         <input type="file" id="baseline-file" accept=".xls,.xlsx">
-        <div class="hint">새로 업로드하면 그 시점 기준으로 초기화되고, 이후 출고/입고 내역이 여기에 누적 반영됩니다.</div>
+        <div class="hint">새로 업로드하면 그 시점 기준으로 초기화되고, 이후 출고/입고 내역이 여기에 누적 반영됩니다. 파일을 이 박스로 드래그해서 놓아도 됩니다.</div>
       </div>
 
       <div class="toolbar">
@@ -320,19 +321,19 @@
     </section>
 
     <section class="tab-panel" id="panel-outbound">
-      <div class="upload-box">
+      <div class="upload-box" id="outbound-upload-box">
         <label class="btn" for="outbound-file">출고 엑셀 첨부</label>
         <input type="file" id="outbound-file" accept=".xls,.xlsx">
-        <div class="hint">더존 출고현황 엑셀을 그대로 업로드하세요. 업로드할 때마다 누적됩니다.</div>
+        <div class="hint">더존 출고현황 엑셀을 그대로 업로드하세요. 업로드할 때마다 누적됩니다. 파일을 이 박스로 드래그해서 놓아도 됩니다.</div>
       </div>
       <div id="outbound-list"></div>
     </section>
 
     <section class="tab-panel" id="panel-inbound">
-      <div class="upload-box">
+      <div class="upload-box" id="inbound-upload-box">
         <label class="btn" for="inbound-file">입고 엑셀 첨부</label>
         <input type="file" id="inbound-file" accept=".xls,.xlsx">
-        <div class="hint">재고이동전표(전체 입고 수량 시트) 또는 개별 입고 엑셀을 업로드하세요.</div>
+        <div class="hint">재고이동전표(전체 입고 수량 시트) 또는 개별 입고 엑셀을 업로드하세요. 파일을 이 박스로 드래그해서 놓아도 됩니다.</div>
       </div>
       <div id="inbound-list"></div>
     </section>
@@ -352,6 +353,19 @@
       <button type="button" id="expiry-add-btn">추가</button>
     </div>
     <button type="button" class="modal-close" id="expiry-modal-close">닫기</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="stock-modal" hidden>
+  <div class="modal-card">
+    <h3>현재고 수정</h3>
+    <div class="modal-sub" id="stock-modal-sub"></div>
+    <div class="lot-add-row">
+      <input type="number" id="stock-new-qty" class="qty-input" placeholder="현재고 수량" style="flex:1 1 100%;">
+      <button type="button" id="stock-save-btn">저장</button>
+    </div>
+    <button type="button" class="modal-close" id="stock-reset-btn">자동계산값으로 되돌리기</button>
+    <button type="button" class="modal-close" id="stock-modal-close">닫기</button>
   </div>
 </div>
 
@@ -533,6 +547,32 @@
     }
     return out;
   }
+  // "28.01.01(12B)01.06(11B)02.10(27B)" 같은 비고란 자유서식에서 날짜+박스수를 뽑아냄.
+  // 뒤에 나오는 mm.dd(연도 생략)는 바로 앞 전체 날짜와 같은 연도로 간주. 괄호가 없으면 boxes:null
+  // (그 경우 그 날짜 하나가 그 행의 전체 수량을 그대로 가짐 - 예: "28.02.26" 단독 표기)
+  function extractDatesFromRemark(text) {
+    if (!text) return [];
+    var out = [];
+    var fullDateRe = /(\d{2})\.(\d{2})\.(\d{2})(?:\((\d+)\s*B?\))?/g;
+    var matches = [], m;
+    while ((m = fullDateRe.exec(text)) !== null) matches.push({ index: m.index, len: m[0].length, yy: m[1], mm: m[2], dd: m[3], boxes: m[4] ? Number(m[4]) : null });
+    for (var i = 0; i < matches.length; i++) {
+      var cur = matches[i];
+      out.push({ date: cur.yy + "." + cur.mm + "." + cur.dd, boxes: cur.boxes });
+      var segStart = cur.index + cur.len;
+      var segEnd = i + 1 < matches.length ? matches[i + 1].index : text.length;
+      var seg = text.slice(segStart, segEnd);
+      var partialRe = /(\d{2})\.(\d{2})(?:\((\d+)\s*B?\))?(?!\.\d)/g, pm;
+      while ((pm = partialRe.exec(seg)) !== null) out.push({ date: cur.yy + "." + pm[1] + "." + pm[2], boxes: pm[3] ? Number(pm[3]) : null });
+    }
+    return out;
+  }
+
+  // 품목별 박스당 입수량(1박스 = 몇 개). 비고란에 "날짜(NN박스)" 형태로만 적힌 입고 수량을
+  // 실제 개수로 환산할 때 사용 (바코드/품번 기준). 아직 못 채운 품목은 박스수만 참고로 표시되고
+  // 재고 수량 계산에는 반영되지 않음 - 부영님이 품목별 입수량표를 주시면 채워 넣을 예정.
+  var UNITS_PER_BOX = {};
+
   function parseInbound(wb) {
     var sheetName = wb.SheetNames.indexOf("전체 입고 수량") !== -1 ? "전체 입고 수량" : wb.SheetNames[0];
     var rows = sheetRows(wb, sheetName);
@@ -540,13 +580,21 @@
     var idx = {
       barcode: findCol(header, ["품  번", "품번"]), name: findCol(header, ["품  명", "품명"]),
       qty: findCol(header, ["이동수량"]), expiry: findCol(header, ["소비기한"]), date: findCol(header, ["No.", "No"]),
+      remark: findCol(header, ["비고"]), lot: findCol(header, ["LOT"]),
     };
     if (idx.barcode === -1 || idx.qty === -1) throw new Error("입고 엑셀 형식이 맞는지 확인해주세요 (품번/이동수량 컬럼을 못 찾음)");
     var out = [];
     for (var i = 1; i < rows.length; i++) {
       var r = rows[i]; var barcode = r[idx.barcode];
       if (!barcode) continue;
-      out.push({ barcode: String(barcode), name: idx.name !== -1 ? (r[idx.name] || "") : "", qty: Number(r[idx.qty]) || 0, expiry: idx.expiry !== -1 ? (r[idx.expiry] || "") : "", date: idx.date !== -1 ? (r[idx.date] || "") : "" });
+      var primaryExpiry = idx.expiry !== -1 ? (r[idx.expiry] || "") : "";
+      var remarkText = (idx.remark !== -1 ? r[idx.remark] : "") || (idx.lot !== -1 ? r[idx.lot] : "") || "";
+      var lots = primaryExpiry ? [] : extractDatesFromRemark(String(remarkText));
+      out.push({
+        barcode: String(barcode), name: idx.name !== -1 ? (r[idx.name] || "") : "",
+        qty: Number(r[idx.qty]) || 0, expiry: primaryExpiry, lots: lots,
+        date: idx.date !== -1 ? (r[idx.date] || "") : "",
+      });
     }
     return out;
   }
@@ -580,7 +628,20 @@
         if (!map[r.barcode]) map[r.barcode] = { barcode: r.barcode, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
         map[r.barcode].inbound += r.qty;
         if (r.name && !map[r.barcode].name) map[r.barcode].name = r.name;
-        if (r.expiry) map[r.barcode].expiries.push({ date: r.expiry, qty: r.qty });
+        if (r.expiry) {
+          map[r.barcode].expiries.push({ date: r.expiry, qty: r.qty });
+        } else if (r.lots && r.lots.length) {
+          if (r.lots.length === 1 && r.lots[0].boxes == null) {
+            // 비고에 날짜 하나만 있고 박스수 표기가 없으면 그 행 전체 수량이 그 날짜 소비기한
+            map[r.barcode].expiries.push({ date: r.lots[0].date, qty: r.qty });
+          } else {
+            var perBox = UNITS_PER_BOX[r.barcode];
+            r.lots.forEach(function (lot) {
+              var lotQty = lot.boxes != null && perBox ? lot.boxes * perBox : null;
+              map[r.barcode].expiries.push({ date: lot.date, qty: lotQty, boxes: lot.boxes });
+            });
+          }
+        }
       });
     });
     var list = Object.keys(map)
@@ -588,6 +649,12 @@
       .map(function (k) {
         var v = map[k];
         v.remaining = v.baseline - v.outbound + v.inbound;
+        v.autoRemaining = v.remaining;
+        // 화면에서 직접 수정한 현재고(state.manualStock)가 있으면 그 값으로 덮어씀
+        if (state.manualStock && state.manualStock[v.barcode] !== undefined) {
+          v.remaining = state.manualStock[v.barcode];
+          v.stockOverridden = true;
+        }
         // 최근 7일 출고량을 앞으로 7일 예상 수요로 보고, 남은재고가 그보다 적으면 품절위험
         v.stockoutRisk = v.recent7d > 0 && v.remaining < v.recent7d;
         if (v.remaining <= 0) v.status = "danger";
@@ -596,9 +663,13 @@
         else if (v.warnQty > 0 && v.remaining <= v.warnQty) v.status = "warn";
         else v.status = "ok";
 
-        // 화면에서 직접 관리하는 소비기한(state.manualExpiry)이 있으면 그게 우선 (없으면 입고 엑셀 기준 유지)
-        if (state.manualExpiry && state.manualExpiry[v.barcode] !== undefined) {
-          v.expiries = state.manualExpiry[v.barcode].slice();
+        // 화면에서 직접 관리하는 소비기한(state.manualExpiry)은 계산된(입고 엑셀 기반) 값에 합쳐서 보여줌
+        // (날짜가 겹치면 실제 입고 데이터 쪽을 우선하고, 수기로만 등록된 날짜는 추가로 표시)
+        if (state.manualExpiry && state.manualExpiry[v.barcode] && state.manualExpiry[v.barcode].length) {
+          var haveDates = v.expiries.map(function (e) { return e.date; });
+          state.manualExpiry[v.barcode].forEach(function (e) {
+            if (haveDates.indexOf(e.date) === -1) v.expiries.push(e);
+          });
         }
         v.expiries.sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
         v.nearestExpiryDays = v.expiries.length ? expiryDays(v.expiries[0].date) : null;
@@ -700,7 +771,8 @@
         '<td class="mono">' + item.baseline + "</td>" +
         '<td class="mono">' + item.outbound + "</td>" +
         '<td class="mono">' + item.inbound + "</td>" +
-        '<td class="mono"><strong>' + item.remaining + "</strong></td>" +
+        '<td class="mono"><strong' + (item.stockOverridden ? ' title="자동계산값: ' + item.autoRemaining + '개 (수기로 수정됨)" style="color:var(--accent-2)"' : '') + '>' + item.remaining + "</strong>" +
+          '<button type="button" class="edit-expiry-link" data-edit-stock="' + item.barcode + '">수정</button></td>' +
         "<td>" + expiryPill + "</td>" +
         "</tr>";
     }).join("");
@@ -794,6 +866,39 @@
     persist();
   });
 
+  // ---------- 현재고 수정 모달 ----------
+  var editingStockBarcode = null;
+
+  function openStockModal(barcode) {
+    editingStockBarcode = barcode;
+    var stock = computeStock();
+    var item = stock.filter(function (i) { return i.barcode === barcode; })[0];
+    document.getElementById("stock-modal-sub").textContent = (item ? item.name : barcode) + " (" + barcode + ")" +
+      (item ? " · 자동계산값: " + item.autoRemaining + "개" : "");
+    document.getElementById("stock-new-qty").value = item ? item.remaining : "";
+    document.getElementById("stock-modal").hidden = false;
+  }
+
+  function closeStockModal() {
+    document.getElementById("stock-modal").hidden = true;
+    editingStockBarcode = null;
+  }
+
+  document.getElementById("stock-save-btn").addEventListener("click", function () {
+    var val = document.getElementById("stock-new-qty").value.trim();
+    if (val === "" || isNaN(Number(val))) { alert("숫자를 입력해주세요."); return; }
+    if (!state.manualStock) state.manualStock = {};
+    state.manualStock[editingStockBarcode] = Number(val);
+    closeStockModal();
+    renderAll(); persist();
+  });
+  document.getElementById("stock-reset-btn").addEventListener("click", function () {
+    if (state.manualStock) delete state.manualStock[editingStockBarcode];
+    closeStockModal();
+    renderAll(); persist();
+  });
+  document.getElementById("stock-modal-close").addEventListener("click", closeStockModal);
+
   // ---------- 이벤트 ----------
   document.querySelectorAll(".tab-btn").forEach(function (btn) {
     btn.addEventListener("click", function () {
@@ -821,8 +926,8 @@
   });
   document.getElementById("stock-search").addEventListener("input", function (e) { currentSearch = e.target.value; renderStock(); });
 
-  document.getElementById("baseline-file").addEventListener("change", function (e) {
-    var file = e.target.files[0]; if (!file) return;
+  function handleBaselineFile(file) {
+    if (!file) return;
     readWorkbookFromFile(file, function (wb) {
       try {
         var items = parseBaseline(wb);
@@ -831,10 +936,9 @@
         renderAll(); persist();
       } catch (err) { alert(err.message); }
     });
-    e.target.value = "";
-  });
-  document.getElementById("outbound-file").addEventListener("change", function (e) {
-    var file = e.target.files[0]; if (!file) return;
+  }
+  function handleOutboundFile(file) {
+    if (!file) return;
     readWorkbookFromFile(file, function (wb) {
       try {
         var rows = parseOutbound(wb);
@@ -843,10 +947,9 @@
         renderAll(); persist();
       } catch (err) { alert(err.message); }
     });
-    e.target.value = "";
-  });
-  document.getElementById("inbound-file").addEventListener("change", function (e) {
-    var file = e.target.files[0]; if (!file) return;
+  }
+  function handleInboundFile(file) {
+    if (!file) return;
     readWorkbookFromFile(file, function (wb) {
       try {
         var rows = parseInbound(wb);
@@ -855,8 +958,31 @@
         renderAll(); persist();
       } catch (err) { alert(err.message); }
     });
-    e.target.value = "";
-  });
+  }
+  document.getElementById("baseline-file").addEventListener("change", function (e) { handleBaselineFile(e.target.files[0]); e.target.value = ""; });
+  document.getElementById("outbound-file").addEventListener("change", function (e) { handleOutboundFile(e.target.files[0]); e.target.value = ""; });
+  document.getElementById("inbound-file").addEventListener("change", function (e) { handleInboundFile(e.target.files[0]); e.target.value = ""; });
+
+  // 파일 드래그해서 업로드
+  function wireDropZone(boxId, onFile) {
+    var box = document.getElementById(boxId);
+    if (!box) return;
+    ["dragenter", "dragover"].forEach(function (evt) {
+      box.addEventListener(evt, function (e) { e.preventDefault(); e.stopPropagation(); box.classList.add("drag-over"); });
+    });
+    ["dragleave", "dragend"].forEach(function (evt) {
+      box.addEventListener(evt, function (e) { e.preventDefault(); e.stopPropagation(); box.classList.remove("drag-over"); });
+    });
+    box.addEventListener("drop", function (e) {
+      e.preventDefault(); e.stopPropagation();
+      box.classList.remove("drag-over");
+      var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) onFile(file);
+    });
+  }
+  wireDropZone("baseline-upload-box", handleBaselineFile);
+  wireDropZone("outbound-upload-box", handleOutboundFile);
+  wireDropZone("inbound-upload-box", handleInboundFile);
 
   document.body.addEventListener("click", function (e) {
     if (e.target.classList.contains("del-btn")) {
@@ -869,7 +995,9 @@
     var statBtn = e.target.closest(".stat[data-filter]");
     if (statBtn) { currentFilter = statBtn.dataset.filter; renderStock(); return; }
     var editBtn = e.target.closest("[data-edit-expiry]");
-    if (editBtn) { openExpiryModal(editBtn.dataset.editExpiry); }
+    if (editBtn) { openExpiryModal(editBtn.dataset.editExpiry); return; }
+    var editStockBtn = e.target.closest("[data-edit-stock]");
+    if (editStockBtn) { openStockModal(editStockBtn.dataset.editStock); }
   });
 })();
 </script>
