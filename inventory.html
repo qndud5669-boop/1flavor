@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>첫맛 재고 트래커</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --surface-sunken: #f0efec;
+    --ink: #1e1e1c;
+    --ink-soft: #63615b;
+    --ink-faint: #97948c;
+    --border: #e2e0da;
+    --accent: #2f6690;
+    --accent-soft: #dfe9f0;
+    --ok: #2f7a4f;
+    --ok-soft: #e3f0e7;
+    --warn: #a3760f;
+    --warn-soft: #faf0d9;
+    --danger: #b23a2e;
+    --danger-soft: #f7e3e0;
+    --info: #5b4a9c;
+    --info-soft: #eae5f5;
+    --shadow: 0 1px 2px rgba(30,30,28,0.04), 0 6px 20px -10px rgba(30,30,28,0.15);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17140f; --surface: #201c16; --surface-sunken: #292420;
+      --ink: #efece4; --ink-soft: #b3aca0; --ink-faint: #777165; --border: #38322a;
+      --accent: #7fb0d9; --accent-soft: #1c2e3a;
+      --ok: #6fbf8c; --ok-soft: #1e2c22; --warn: #d9ac4c; --warn-soft: #332a14;
+      --danger: #e0847a; --danger-soft: #35211d;
+      --info: #a99ce0; --info-soft: #2a2440;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px -10px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17140f; --surface: #201c16; --surface-sunken: #292420;
+    --ink: #efece4; --ink-soft: #b3aca0; --ink-faint: #777165; --border: #38322a;
+    --accent: #7fb0d9; --accent-soft: #1c2e3a;
+    --ok: #6fbf8c; --ok-soft: #1e2c22; --warn: #d9ac4c; --warn-soft: #332a14;
+    --danger: #e0847a; --danger-soft: #35211d;
+    --info: #a99ce0; --info-soft: #2a2440;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px -10px rgba(0,0,0,0.6);
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
+    font-size: 14.5px; line-height: 1.55;
+  }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  #login-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; align-items: center; justify-content: center; z-index: 100;
+  }
+  .login-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 36px 32px; width: 320px; box-shadow: var(--shadow);
+  }
+  .login-card h1 { font-size: 17px; margin: 0 0 4px; }
+  .login-card p { font-size: 12.5px; color: var(--ink-faint); margin: 0 0 20px; }
+  .login-card input {
+    width: 100%; padding: 10px 12px; margin-bottom: 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-sunken); color: var(--ink); font-size: 14px;
+  }
+  .login-card button {
+    width: 100%; padding: 10px; border-radius: 8px; border: none;
+    background: var(--accent); color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 6px;
+  }
+  #login-error { color: var(--danger); font-size: 12.5px; margin-top: 8px; display: none; }
+
+  #app { display: none; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  header.top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+  header.top h1 { font-size: 19px; margin: 0; }
+  header.top .sub { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
+  .logout-btn { font-size: 12px; color: var(--ink-faint); background: none; border: 1px solid var(--border); border-radius: 100px; padding: 5px 12px; cursor: pointer; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+  .tab-btn {
+    padding: 10px 16px; font-size: 14px; font-weight: 500; color: var(--ink-soft);
+    background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+  .stat {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 14px 16px;
+    box-shadow: var(--shadow); cursor: pointer; text-align: left; font-family: inherit;
+  }
+  .stat .label { font-size: 11.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .03em; }
+  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .stat.active { border-color: var(--accent); }
+  @media (max-width: 720px) { .stat-row { grid-template-columns: repeat(2,1fr); } }
+
+  .brand-row { display: flex; gap: 6px; margin-bottom: 16px; }
+  .brand-btn {
+    font-size: 13px; font-weight: 600; padding: 7px 16px; border-radius: 8px;
+    border: 1.5px solid var(--border); background: var(--surface); color: var(--ink-soft); cursor: pointer;
+  }
+  .brand-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .search-input {
+    flex: 1; min-width: 180px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--ink); font-size: 13.5px;
+  }
+  .filter-chip {
+    font-size: 12.5px; padding: 5px 11px; border-radius: 100px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--ink-soft); cursor: pointer;
+  }
+  .filter-chip.active { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+
+  .upload-box {
+    border: 1.5px dashed var(--border); border-radius: 12px; padding: 20px; text-align: center;
+    background: var(--surface); margin-bottom: 18px;
+  }
+  .upload-box .btn {
+    display: inline-block; background: var(--accent); color: #fff; font-weight: 600; font-size: 13.5px;
+    padding: 9px 18px; border-radius: 8px; cursor: pointer; border: none;
+  }
+  .upload-box input[type=file] { display: none; }
+  .upload-box .hint { font-size: 12px; color: var(--ink-faint); margin-top: 8px; }
+
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+  thead th {
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-faint);
+    background: var(--surface-sunken); padding: 9px 12px; border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-sunken); }
+
+  .pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.danger { background: var(--danger-soft); color: var(--danger); }
+  .pill.info { background: var(--info-soft); color: var(--info); }
+  .pill.neutral { background: var(--surface-sunken); color: var(--ink-faint); }
+
+  .batch-card {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px;
+  }
+  .batch-card .meta { font-size: 12.5px; color: var(--ink-faint); }
+  .batch-card .name { font-weight: 600; font-size: 13.5px; }
+  .del-btn { font-size: 12px; color: var(--danger); background: none; border: 1px solid var(--border); border-radius: 100px; padding: 4px 12px; cursor: pointer; }
+
+  .empty { text-align: center; color: var(--ink-faint); font-size: 13px; padding: 28px 0; }
+  .save-status { position: fixed; bottom: 18px; right: 18px; font-size: 12px; color: var(--ink-faint); background: var(--surface); border: 1px solid var(--border); padding: 6px 12px; border-radius: 100px; box-shadow: var(--shadow); opacity: 0; transition: opacity .3s; }
+  .save-status.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <h1>첫맛 재고 트래커</h1>
+    <p>담당자 계정으로 로그인해주세요.</p>
+    <input id="login-id" type="text" placeholder="아이디" autocomplete="off">
+    <input id="login-pw" type="password" placeholder="비밀번호">
+    <button id="login-btn">로그인</button>
+    <div id="login-error">아이디 또는 비밀번호가 올바르지 않습니다.</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <header class="top">
+      <div>
+        <h1>첫맛 재고 트래커</h1>
+        <div class="sub" id="last-updated">불러오는 중...</div>
+      </div>
+      <button class="logout-btn" id="logout-btn">로그아웃</button>
+    </header>
+
+    <div class="brand-row" id="brand-row">
+      <button class="brand-btn active" data-brand="all">전체</button>
+      <button class="brand-btn" data-brand="첫맛">첫맛</button>
+      <button class="brand-btn" data-brand="저스톡">저스톡</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="stock">첫맛 현재고</button>
+      <button class="tab-btn" data-tab="outbound">출고내역 관리</button>
+      <button class="tab-btn" data-tab="inbound">입고내역 관리</button>
+    </div>
+
+    <section class="tab-panel active" id="panel-stock">
+      <div class="stat-row" id="stock-stats"></div>
+
+      <div class="upload-box">
+        <label class="btn" for="baseline-file">기초재고 새로 설정 (이지어드민 현재고 엑셀 업로드)</label>
+        <input type="file" id="baseline-file" accept=".xls,.xlsx">
+        <div class="hint">새로 업로드하면 그 시점 기준으로 초기화되고, 이후 출고/입고 내역이 여기에 누적 반영됩니다.</div>
+      </div>
+
+      <div class="toolbar">
+        <input class="search-input" id="stock-search" placeholder="상품명 또는 바코드 검색">
+        <button class="filter-chip sort-chip active" data-sort="remaining">재고 적은순</button>
+        <button class="filter-chip sort-chip" data-sort="expiry">소비기한 빠른순</button>
+      </div>
+
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>상태</th><th>상품명</th><th>바코드</th><th>기초재고</th><th>누적출고</th><th>누적입고</th><th>현재고</th><th>소비기한(로트별)</th></tr>
+          </thead>
+          <tbody id="stock-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-outbound">
+      <div class="upload-box">
+        <label class="btn" for="outbound-file">출고 엑셀 첨부</label>
+        <input type="file" id="outbound-file" accept=".xls,.xlsx">
+        <div class="hint">더존 출고현황 엑셀을 그대로 업로드하세요. 업로드할 때마다 누적됩니다.</div>
+      </div>
+      <div id="outbound-list"></div>
+    </section>
+
+    <section class="tab-panel" id="panel-inbound">
+      <div class="upload-box">
+        <label class="btn" for="inbound-file">입고 엑셀 첨부</label>
+        <input type="file" id="inbound-file" accept=".xls,.xlsx">
+        <div class="hint">재고이동전표(전체 입고 수량 시트) 또는 개별 입고 엑셀을 업로드하세요.</div>
+      </div>
+      <div id="inbound-list"></div>
+    </section>
+  </div>
+</div>
+
+<div class="save-status" id="save-status">저장됨</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var LOGIN_ID = "echungwoo";
+  var LOGIN_PW = "dlcjddn1004!";
+
+  // 저장은 Cloudflare Worker를 통해서만 이루어짐 (GitHub 토큰은 Worker 서버 쪽 비밀변수로만 존재,
+  // 이 페이지 코드에는 전혀 노출되지 않음)
+  var WORKER_URL = "https://cheotmat-inventory-api.ecw-c18.workers.dev";
+
+  var state = { baseline: null, outboundBatches: [], inboundBatches: [] };
+
+  // 단종상품 - 현재고 계산에서 완전히 제외
+  var EXCLUDED_NAMES = [
+    "첫맛 1호 선물세트 개별세트",
+    "첫맛 꼬지소스 순한맛 460g",
+    "첫맛 닭강정매운맛소스 10kg",
+    "첫맛 떡볶이양념 10kg",
+    "첫맛 양념치킨매운맛소스 440g",
+    "첫맛 캡사이신매운맛소스 10kg",
+    "첫맛 선물세트 6개입 카톤",
+  ];
+
+  // 구글시트(재고 이슈품목-판매계획-현황) "소비기한 임박건" 시트에서 가져온 참고용 소비기한.
+  // 실제 입고 엑셀을 첨부하면 그쪽 데이터가 우선하고, 없을 때만 이 값을 참고로 보여줌.
+  var SEED_EXPIRY = {"첫맛 내몸엔저당 저당불닭소스 345g":["26.10.19"],"첫맛 내몸엔저당 저당캡스파이시마요소스 300g":["26.10.20"],"첫맛 만능비빔&무침양념 30g":["26.12.04"],"첫맛 모밀소스 2.1kg":["26.12.11"],"첫맛 양념치킨매운맛소스 10kg":["26.12.12","28.01.22"],"첫맛 만능멸치육수 500g":["26.12.18"],"첫맛 만능비빔무침양념 550g":["26.12.19"],"첫맛 만능비빔무침양념 330g":["26.12.29"],"첫맛 모밀소스 1.05kg":["27.01.06","27.11.17"],"첫맛 타르타르드레싱소스 1.7kg":["27.01.15"],"첫맛 만능멸치육수 300g":["27.02.04"],"첫맛 돼지불고기 양념 2.1kg":["27.03.02","27.09.18"],"첫맛 돼지불고기양념 10kg":["27.03.03"],"첫맛 만능비빔&무침양념 1.1kg":["27.03.07","27.03.29","27.07.21"],"첫맛 돼지갈비양념 10kg":["27.03.10"],"첫맛 소갈비양념 10kg":["27.03.10"],"첫맛 바베큐소스 10kg":["27.03.24"],"첫맛 허니머스타드소스 1.85kg":["27.04.05"],"첫맛 캡사이신분말 1kg":["27.04.06"],"첫맛 캡사이신분말 400g":["27.04.09"],"첫맛 내몸엔저당 저당비빔무침양념 365g":["27.04.15"],"첫맛 내몸엔저당 저당양념치킨소스 345g":["27.04.16"],"첫맛 탕수육소스 1.85kg":["27.04.19","27.07.05"],"첫맛 만능김치찌개분말 500g":["27.04.23"],"첫맛 겨자머스타드소스 1kg":["27.04.26"],"첫맛 저당 떡볶이양념분말 500g":["27.04.26","27.06.16"],"첫맛 케이준드레싱소스 1.7kg":["27.05.14"],"첫맛 해파리겨자냉채소스 880g":["27.05.25"],"첫맛 돈까스소스 1.9kg":["27.05.25"],"첫맛 정통데리야끼소스 1.9kg":["27.05.28"],"첫맛 떡볶이양념분말(매운맛) 500g":["27.05.28"],"첫맛 만능치킨스톡 1kg":["27.05.28"],"첫맛 돈까스소스 990g":["27.06.03"],"첫맛 양념치킨순한맛소스 440g":["27.06.07"],"첫맛 떡볶이양념분말(매운맛) 1kg":["27.06.11"],"첫맛 떡볶이양념분말(순한맛) 1kg":["27.06.15","27.07.05"],"첫맛 떡볶이양념분말(순한맛) 500g":["27.06.15"],"첫맛 요리맛술 2kg":["27.06.21"],"첫맛 캡사이신매운맛소스 550g":["27.07.08"],"첫맛 만능해물육수 1kg":["27.07.13"],"첫맛 오뎅탕육수진국 1kg":["27.07.18"],"첫맛 닭강정순한맛소스 10kg":["27.07.20"],"첫맛 꼬지소스 순한맛 10kg":["27.07.21","27.11.27"],"첫맛 캡사이신매운맛소스 2kg":["27.07.27"],"첫맛 쭈낙볶음양념 2.1kg":["27.08.02","27.10.12"],"첫맛 가쓰오진국 2kg":["27.08.11","27.10.19"],"닭강정순한맛소스 2.1kg":["27.09.04"],"첫맛 닭강정순한맛소스 2.1kg":["27.09.04"],"첫맛 핫바베큐소스 2.05kg":["26.08.25","27.01.08","27.06.01","27.09.16"],"첫맛 마늘간장소스 1.05kg":["27.09.17","27.12.10"],"첫맛 돼지갈비양념 1.95kg":["27.09.18"],"첫맛 소갈비양념 2kg":["27.09.18"],"첫맛 양념치킨순한맛소스 530g":["27.09.24"],"첫맛 양념치킨매운맛소스 530g":["27.09.24"],"첫맛 꼬지소스순한맛 540g":["27.09.24"],"첫맛 꼬지소스매운맛 540g":["27.09.24"],"첫맛 파절이소스 970g":["27.10.06"],"첫맛 8배고농축냉면육수 1.1kg":["27.10.06","28.01.13"],"첫맛 만능멸치육수 1.95kg":["27.10.14"],"첫맛 꼬지소스 매운맛 2.1kg":["27.10.20","27.12.04","27.12.08"],"첫맛 꼬지소스매운맛 10kg":["27.10.20"],"첫맛 매운닭발양념 2kg":["27.10.20"],"첫맛 닭강정매운맛소스 2.1kg":["27.10.22"],"첫맛 양념치킨 순한맛소스 2.1kg":["27.10.26"],"첫맛 만능불볶음양념 2kg":["27.10.26"],"첫맛 소불고기양념 2kg":["27.11.11"],"첫맛 스위트칠리소스 2.05kg":["27.11.12"],"첫맛 우동다시 2kg":["27.11.19","27.12.04","27.12.17"],"첫맛 떡볶이비법양념 2.1kg":["27.11.20"],"첫맛 꼬지소스 순한맛 2.1kg":["26.09.19","27.11.20"],"첫맛 만능불볶음양념 1kg":["27.11.30"],"첫맛 양념치킨 매운맛소스 2.1kg":["27.12.04"],"첫맛 8배고농축냉면육수 2.1kg":["27.12.14","27.12.23"],"첫맛 양념치킨순한맛소스 10kg":["27.12.15"],"첫맛 만능멸치육수 10kg":["27.12.22"],"첫맛 만능비빔&무침양념 2.2kg":["27.11.27","27.12.03","27.12.30"],"첫맛 만능멸치육수 1kg":["28.01.02"],"첫맛 만능파절이소스 1.9kg":["28.01.05"],"첫맛 모밀소스 10kg":["28.01.22"],"첫맛 8배고농축냉면육수 10kg":["28.01.26"],"금실면 슈퍼용 450g":["28.02.08"]};
+
+  async function loadState() {
+    try {
+      var res = await fetch(WORKER_URL, { cache: "no-store" });
+      state = await res.json();
+    } catch (e) {
+      console.error("불러오기 실패", e);
+      alert("데이터 불러오기에 실패했습니다: " + e.message);
+    }
+  }
+
+  async function persist() {
+    try {
+      var res = await fetch(WORKER_URL, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(state),
+      });
+      var json = await res.json();
+      if (!res.ok) throw new Error(json.error || JSON.stringify(json));
+      var el = document.getElementById("save-status");
+      el.classList.add("show");
+      setTimeout(function () { el.classList.remove("show"); }, 1800);
+    } catch (e) {
+      console.error("저장 실패", e);
+      alert("저장에 실패했습니다: " + e.message + "\n다시 시도하기 전에 새로고침 해주세요 (다른 사람이 동시에 저장했을 수 있습니다).");
+    }
+  }
+
+  // ---------- 로그인 ----------
+  function tryLogin() {
+    var id = document.getElementById("login-id").value.trim();
+    var pw = document.getElementById("login-pw").value;
+    if (id === LOGIN_ID && pw === LOGIN_PW) {
+      try { sessionStorage.setItem("cheotmat_inv_auth", "1"); } catch (e) {}
+      enterApp();
+    } else {
+      document.getElementById("login-error").style.display = "block";
+    }
+  }
+  document.getElementById("login-btn").addEventListener("click", tryLogin);
+  document.getElementById("login-pw").addEventListener("keydown", function (e) { if (e.key === "Enter") tryLogin(); });
+  document.getElementById("logout-btn").addEventListener("click", function () {
+    try { sessionStorage.removeItem("cheotmat_inv_auth"); } catch (e) {}
+    location.reload();
+  });
+
+  async function enterApp() {
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    await loadState();
+    renderAll();
+  }
+
+  try {
+    if (sessionStorage.getItem("cheotmat_inv_auth") === "1") enterApp();
+  } catch (e) {}
+
+  // ---------- 유틸 ----------
+  function findCol(header, candidates) {
+    for (var i = 0; i < candidates.length; i++) {
+      var idx = header.indexOf(candidates[i]);
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  }
+  function readWorkbookFromFile(file, callback) {
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var data = new Uint8Array(e.target.result);
+      callback(XLSX.read(data, { type: "array" }));
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  function sheetRows(wb, sheetName) {
+    var sheet = wb.Sheets[sheetName || wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
+  }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function todayLabel() {
+    var d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  // ---------- 파싱 ----------
+  function parseBaseline(wb) {
+    var rows = sheetRows(wb);
+    var header = rows[0] || [];
+    var idx = {
+      barcode: findCol(header, ["바코드"]), name: findCol(header, ["상품명"]), qty: findCol(header, ["가용재고"]),
+      warn: findCol(header, ["경고수량"]), danger: findCol(header, ["위험수량"]),
+    };
+    if (idx.barcode === -1 || idx.qty === -1) throw new Error("이지어드민 현재고 형식이 맞는지 확인해주세요 (바코드/가용재고 컬럼을 못 찾음)");
+    var items = {};
+    for (var i = 1; i < rows.length; i++) {
+      var r = rows[i]; var barcode = r[idx.barcode];
+      if (!barcode) continue;
+      items[String(barcode)] = {
+        name: idx.name !== -1 ? (r[idx.name] || "") : "",
+        qty: Number(r[idx.qty]) || 0,
+        warnQty: idx.warn !== -1 ? (Number(r[idx.warn]) || 0) : 0,
+        dangerQty: idx.danger !== -1 ? (Number(r[idx.danger]) || 0) : 0,
+      };
+    }
+    return items;
+  }
+  function parseOutbound(wb) {
+    var rows = sheetRows(wb);
+    var header = rows[0] || [];
+    var idx = { barcode: findCol(header, ["품번"]), name: findCol(header, ["품명"]), qty: findCol(header, ["출고수량"]), date: findCol(header, ["출고일자"]) };
+    if (idx.barcode === -1 || idx.qty === -1) throw new Error("출고 엑셀 형식이 맞는지 확인해주세요 (품번/출고수량 컬럼을 못 찾음)");
+    var out = [];
+    for (var i = 1; i < rows.length; i++) {
+      var r = rows[i]; var barcode = r[idx.barcode];
+      if (!barcode) continue;
+      out.push({ barcode: String(barcode), name: idx.name !== -1 ? (r[idx.name] || "") : "", qty: Number(r[idx.qty]) || 0, date: idx.date !== -1 ? (r[idx.date] || "") : "" });
+    }
+    return out;
+  }
+  function parseInbound(wb) {
+    var sheetName = wb.SheetNames.indexOf("전체 입고 수량") !== -1 ? "전체 입고 수량" : wb.SheetNames[0];
+    var rows = sheetRows(wb, sheetName);
+    var header = rows[0] || [];
+    var idx = {
+      barcode: findCol(header, ["품  번", "품번"]), name: findCol(header, ["품  명", "품명"]),
+      qty: findCol(header, ["이동수량"]), expiry: findCol(header, ["소비기한"]), date: findCol(header, ["No.", "No"]),
+    };
+    if (idx.barcode === -1 || idx.qty === -1) throw new Error("입고 엑셀 형식이 맞는지 확인해주세요 (품번/이동수량 컬럼을 못 찾음)");
+    var out = [];
+    for (var i = 1; i < rows.length; i++) {
+      var r = rows[i]; var barcode = r[idx.barcode];
+      if (!barcode) continue;
+      out.push({ barcode: String(barcode), name: idx.name !== -1 ? (r[idx.name] || "") : "", qty: Number(r[idx.qty]) || 0, expiry: idx.expiry !== -1 ? (r[idx.expiry] || "") : "", date: idx.date !== -1 ? (r[idx.date] || "") : "" });
+    }
+    return out;
+  }
+
+  // ---------- 계산 ----------
+  var currentFilter = "all", currentSearch = "", currentSort = "remaining", currentBrand = "all";
+
+  function computeStock() {
+    var map = {};
+    if (!state.baseline) return [];
+    Object.keys(state.baseline.items).forEach(function (barcode) {
+      var b = state.baseline.items[barcode];
+      map[barcode] = { barcode: barcode, name: b.name, baseline: b.qty, warnQty: b.warnQty, dangerQty: b.dangerQty, outbound: 0, inbound: 0, expiries: [] };
+    });
+    state.outboundBatches.forEach(function (batch) {
+      batch.rows.forEach(function (r) {
+        if (!map[r.barcode]) map[r.barcode] = { barcode: r.barcode, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, expiries: [] };
+        map[r.barcode].outbound += r.qty;
+        if (r.name && !map[r.barcode].name) map[r.barcode].name = r.name;
+      });
+    });
+    state.inboundBatches.forEach(function (batch) {
+      batch.rows.forEach(function (r) {
+        if (!map[r.barcode]) map[r.barcode] = { barcode: r.barcode, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, expiries: [] };
+        map[r.barcode].inbound += r.qty;
+        if (r.name && !map[r.barcode].name) map[r.barcode].name = r.name;
+        if (r.expiry) map[r.barcode].expiries.push({ date: r.expiry, qty: r.qty });
+      });
+    });
+    var list = Object.keys(map)
+      .filter(function (k) { return EXCLUDED_NAMES.indexOf(map[k].name) === -1; })
+      .map(function (k) {
+        var v = map[k];
+        v.remaining = v.baseline - v.outbound + v.inbound;
+        if (v.remaining <= 0) v.status = "danger";
+        else if (v.dangerQty > 0 && v.remaining <= v.dangerQty) v.status = "danger";
+        else if (v.warnQty > 0 && v.remaining <= v.warnQty) v.status = "warn";
+        else v.status = "ok";
+
+        // 실제 입고 엑셀로 들어온 소비기한이 없으면, 구글시트 참고자료(수량 미상)로 보충
+        if (v.expiries.length === 0 && SEED_EXPIRY[v.name]) {
+          v.expiries = SEED_EXPIRY[v.name].map(function (d) { return { date: d, qty: null, seed: true }; });
+        }
+        v.expiries.sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
+        v.nearestExpiryDays = v.expiries.length ? expiryDays(v.expiries[0].date) : null;
+        return v;
+      });
+    if (currentSort === "expiry") {
+      list.sort(function (a, b) {
+        var da = a.nearestExpiryDays, db = b.nearestExpiryDays;
+        if (da === null && db === null) return 0;
+        if (da === null) return 1;
+        if (db === null) return -1;
+        return da - db;
+      });
+    } else {
+      list.sort(function (a, b) { return a.remaining - b.remaining; });
+    }
+    return list;
+  }
+
+  function expiryDays(expiryStr) {
+    var m = String(expiryStr).match(/(\d{2})\.(\d{2})\.(\d{2})/);
+    if (!m) return null;
+    var d = new Date(2000 + parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+    return Math.round((d - new Date()) / (1000 * 3600 * 24));
+  }
+  function expiryTier(days) {
+    if (days === null) return { cls: "neutral", label: "" };
+    if (days <= 30) return { cls: "danger", label: "극임박" };
+    if (days <= 90) return { cls: "warn", label: "초임박" };
+    if (days <= 180) return { cls: "info", label: "임박" };
+    return { cls: "neutral", label: "정상" };
+  }
+  function brandOf(name) { return String(name || "").indexOf("저스톡") !== -1 ? "저스톡" : "첫맛"; }
+
+  // ---------- 렌더 ----------
+  function renderAll() {
+    document.getElementById("last-updated").textContent = state.baseline
+      ? "기초재고 기준일: " + state.baseline.setAt + " (" + state.baseline.fileName + ")"
+      : "기초재고가 아직 설정되지 않았습니다";
+    renderStock();
+    renderBatchList("outbound");
+    renderBatchList("inbound");
+  }
+
+  function renderStock() {
+    var all = computeStock();
+    var byBrand = all.filter(function (i) { return currentBrand === "all" || brandOf(i.name) === currentBrand; });
+    var total = byBrand.length;
+    var dangerCount = byBrand.filter(function (i) { return i.status === "danger"; }).length;
+    var warnCount = byBrand.filter(function (i) { return i.status === "warn"; }).length;
+    var expiryCount = byBrand.filter(function (i) { return i.nearestExpiryDays !== null && i.nearestExpiryDays <= 180; }).length;
+
+    document.getElementById("stock-stats").innerHTML =
+      statCard("all", "전체 품목", total) +
+      statCard("danger", "품절/위험", dangerCount, "danger") +
+      statCard("warn", "경고", warnCount, "warn") +
+      statCard("expiry", "소비기한 임박(6개월내)", expiryCount, "info");
+
+    var filtered = byBrand.filter(function (item) {
+      if (currentSearch && (item.name + item.barcode).toLowerCase().indexOf(currentSearch.toLowerCase()) === -1) return false;
+      if (currentFilter === "danger") return item.status === "danger";
+      if (currentFilter === "warn") return item.status === "warn";
+      if (currentFilter === "expiry") return item.nearestExpiryDays !== null && item.nearestExpiryDays <= 180;
+      return true;
+    });
+
+    var tbody = document.getElementById("stock-tbody");
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty">표시할 상품이 없습니다.' + (state.baseline ? "" : " 기초재고를 먼저 업로드해주세요.") + "</div></td></tr>";
+      return;
+    }
+    tbody.innerHTML = filtered.map(function (item) {
+      var expiryPill;
+      if (item.expiries && item.expiries.length) {
+        expiryPill = item.expiries.map(function (lot) {
+          var d = expiryDays(lot.date);
+          var tier = expiryTier(d);
+          var dLabel = d === null ? "" : " (D" + (d >= 0 ? "-" + d : "+" + -d) + ")";
+          var tierLabel = tier.label ? tier.label + " " : "";
+          var qtyLabel = lot.qty === null || lot.qty === undefined ? " (참고)" : " · " + lot.qty + "개";
+          return '<span class="pill ' + tier.cls + '" style="margin:1px 3px 1px 0;">' + tierLabel + lot.date + dLabel + qtyLabel + "</span>";
+        }).join("");
+      } else {
+        expiryPill = '<span class="pill neutral">-</span>';
+      }
+      var statusLabel = item.status === "danger" ? "품절/위험" : item.status === "warn" ? "경고" : "정상";
+      return "<tr>" +
+        '<td><span class="pill ' + item.status + '">' + statusLabel + "</span></td>" +
+        "<td>" + escapeHtml(item.name || "(이름없음)") + "</td>" +
+        '<td class="mono">' + item.barcode + "</td>" +
+        '<td class="mono">' + item.baseline + "</td>" +
+        '<td class="mono">' + item.outbound + "</td>" +
+        '<td class="mono">' + item.inbound + "</td>" +
+        '<td class="mono"><strong>' + item.remaining + "</strong></td>" +
+        "<td>" + expiryPill + "</td>" +
+        "</tr>";
+    }).join("");
+  }
+
+  function statCard(filterKey, label, value, tone) {
+    var color = tone === "danger" ? "var(--danger)" : tone === "warn" ? "var(--warn)" : tone === "info" ? "var(--info)" : "var(--ink)";
+    var active = currentFilter === filterKey ? " active" : "";
+    return '<button type="button" class="stat' + active + '" data-filter="' + filterKey + '"><div class="label">' + label +
+      '</div><div class="value" style="color:' + color + '">' + value + "</div></button>";
+  }
+
+  function renderBatchList(kind) {
+    var batches = kind === "outbound" ? state.outboundBatches : state.inboundBatches;
+    var container = document.getElementById(kind + "-list");
+    if (batches.length === 0) { container.innerHTML = '<div class="empty">아직 첨부된 파일이 없습니다.</div>'; return; }
+    var sorted = batches.slice().reverse();
+    container.innerHTML = sorted.map(function (b) {
+      return '<div class="batch-card"><div><div class="name">' + escapeHtml(b.fileName) + '</div>' +
+        '<div class="meta">첨부일 ' + b.uploadedAt + " · 품목 " + b.rows.length + "건 · 합계수량 " + b.totalQty + '건</div></div>' +
+        '<button class="del-btn" data-kind="' + kind + '" data-id="' + b.id + '">삭제</button></div>';
+    }).join("");
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
+  }
+
+  // ---------- 이벤트 ----------
+  document.querySelectorAll(".tab-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.remove("active"); });
+      document.querySelectorAll(".tab-panel").forEach(function (p) { p.classList.remove("active"); });
+      btn.classList.add("active");
+      document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+    });
+  });
+  document.querySelectorAll(".brand-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".brand-btn").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      currentBrand = btn.dataset.brand;
+      renderStock();
+    });
+  });
+  document.querySelectorAll(".sort-chip").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".sort-chip").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      currentSort = btn.dataset.sort;
+      renderStock();
+    });
+  });
+  document.getElementById("stock-search").addEventListener("input", function (e) { currentSearch = e.target.value; renderStock(); });
+
+  document.getElementById("baseline-file").addEventListener("change", function (e) {
+    var file = e.target.files[0]; if (!file) return;
+    readWorkbookFromFile(file, function (wb) {
+      try {
+        var items = parseBaseline(wb);
+        state.baseline = { setAt: todayLabel(), fileName: file.name, items: items };
+        state.outboundBatches = []; state.inboundBatches = [];
+        renderAll(); persist();
+      } catch (err) { alert(err.message); }
+    });
+    e.target.value = "";
+  });
+  document.getElementById("outbound-file").addEventListener("change", function (e) {
+    var file = e.target.files[0]; if (!file) return;
+    readWorkbookFromFile(file, function (wb) {
+      try {
+        var rows = parseOutbound(wb);
+        var total = rows.reduce(function (s, r) { return s + r.qty; }, 0);
+        state.outboundBatches.push({ id: uid(), uploadedAt: todayLabel(), fileName: file.name, rows: rows, totalQty: total });
+        renderAll(); persist();
+      } catch (err) { alert(err.message); }
+    });
+    e.target.value = "";
+  });
+  document.getElementById("inbound-file").addEventListener("change", function (e) {
+    var file = e.target.files[0]; if (!file) return;
+    readWorkbookFromFile(file, function (wb) {
+      try {
+        var rows = parseInbound(wb);
+        var total = rows.reduce(function (s, r) { return s + r.qty; }, 0);
+        state.inboundBatches.push({ id: uid(), uploadedAt: todayLabel(), fileName: file.name, rows: rows, totalQty: total });
+        renderAll(); persist();
+      } catch (err) { alert(err.message); }
+    });
+    e.target.value = "";
+  });
+
+  document.body.addEventListener("click", function (e) {
+    if (e.target.classList.contains("del-btn")) {
+      var kind = e.target.dataset.kind, id = e.target.dataset.id;
+      var key = kind === "outbound" ? "outboundBatches" : "inboundBatches";
+      state[key] = state[key].filter(function (b) { return b.id !== id; });
+      renderAll(); persist();
+      return;
+    }
+    var statBtn = e.target.closest(".stat[data-filter]");
+    if (statBtn) { currentFilter = statBtn.dataset.filter; renderStock(); }
+  });
+})();
+</script>
+</body>
+</html>
