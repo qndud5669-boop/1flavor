@@ -607,7 +607,8 @@
   // ---------- 계산 ----------
   var currentFilter = "all", currentSearch = "", currentSort = "remaining", currentBrand = "all";
 
-  var STOCKOUT_RISK_DAYS = 7; // 최근 N일 출고량을 앞으로 N일 예상 수요로 보고 재고 위험 판정
+  var STOCKOUT_RISK_DAYS = 7; // 품절/위험: 최근 1주일 출고량을 앞으로 1주일 예상 수요로 보고 판정
+  var WARN_RISK_DAYS = 30; // 경고: 최근 1개월 출고량을 앞으로 1개월 예상 수요로 보고 판정
 
   // 품번(바코드)이 파일마다 다르게 찍히는 경우가 많아서, 품목명(공백/괄호 무시)을 우선 기준으로 매칭.
   // 바코드가 정확히 일치하면 그걸 쓰고, 안 맞으면 이름으로 기초재고 품목을 찾아 거기에 합침.
@@ -621,11 +622,14 @@
     var sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - (STOCKOUT_RISK_DAYS - 1));
     var cutoff = sevenDaysAgo.getFullYear() + "-" + String(sevenDaysAgo.getMonth() + 1).padStart(2, "0") + "-" + String(sevenDaysAgo.getDate()).padStart(2, "0");
+    var thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - (WARN_RISK_DAYS - 1));
+    var cutoff30 = thirtyDaysAgo.getFullYear() + "-" + String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0") + "-" + String(thirtyDaysAgo.getDate()).padStart(2, "0");
 
     var nameIndex = {};
     Object.keys(state.baseline.items).forEach(function (barcode) {
       var b = state.baseline.items[barcode];
-      map[barcode] = { barcode: barcode, name: b.name, baseline: b.qty, warnQty: b.warnQty, dangerQty: b.dangerQty, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
+      map[barcode] = { barcode: barcode, name: b.name, baseline: b.qty, warnQty: b.warnQty, dangerQty: b.dangerQty, outbound: 0, inbound: 0, recent7d: 0, recent30d: 0, expiries: [] };
       var norm = normalizeProductName(b.name);
       if (norm && !nameIndex[norm]) nameIndex[norm] = barcode;
     });
@@ -638,16 +642,17 @@
     state.outboundBatches.forEach(function (batch) {
       batch.rows.forEach(function (r) {
         var key = resolveKey(r.barcode, r.name);
-        if (!map[key]) map[key] = { barcode: key, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
+        if (!map[key]) map[key] = { barcode: key, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, recent30d: 0, expiries: [] };
         map[key].outbound += r.qty;
         if (r.date && r.date >= cutoff) map[key].recent7d += r.qty;
+        if (r.date && r.date >= cutoff30) map[key].recent30d += r.qty;
         if (r.name && !map[key].name) map[key].name = r.name;
       });
     });
     state.inboundBatches.forEach(function (batch) {
       batch.rows.forEach(function (r) {
         var key = resolveKey(r.barcode, r.name);
-        if (!map[key]) map[key] = { barcode: key, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
+        if (!map[key]) map[key] = { barcode: key, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, recent30d: 0, expiries: [] };
         map[key].inbound += r.qty;
         if (r.name && !map[key].name) map[key].name = r.name;
         if (r.expiry) {
@@ -677,12 +682,14 @@
           v.remaining = state.manualStock[v.barcode];
           v.stockOverridden = true;
         }
-        // 최근 7일 출고량을 앞으로 7일 예상 수요로 보고, 남은재고가 그보다 적으면 품절위험
+        // 품절/위험: 최근 1주일 출고량을 앞으로 1주일 예상 수요로 보고, 남은재고가 그보다 적으면 위험
         v.stockoutRisk = v.recent7d > 0 && v.remaining < v.recent7d;
+        // 경고: 최근 1개월 출고량을 앞으로 1개월 예상 수요로 보고, 남은재고가 그보다 적으면 경고
+        v.warnRisk = v.recent30d > 0 && v.remaining < v.recent30d;
         if (v.remaining <= 0) v.status = "danger";
         else if (v.dangerQty > 0 && v.remaining <= v.dangerQty) v.status = "danger";
         else if (v.stockoutRisk) v.status = "danger";
-        else if (v.warnQty > 0 && v.remaining <= v.warnQty) v.status = "warn";
+        else if (v.warnRisk) v.status = "warn";
         else v.status = "ok";
 
         // 화면에서 직접 관리하는 소비기한(state.manualExpiry)은 계산된(입고 엑셀 기반) 값에 합쳐서 보여줌
@@ -759,8 +766,8 @@
 
     document.getElementById("stock-stats").innerHTML =
       statCard("all", "전체 품목", total) +
-      statCard("danger", "품절/위험", dangerCount, "danger") +
-      statCard("warn", "경고", warnCount, "warn") +
+      statCard("danger", "품절/위험(출고 1주일 기준)", dangerCount, "danger") +
+      statCard("warn", "경고(출고 1개월 기준)", warnCount, "warn") +
       statCard("expiry", "소비기한 임박(6개월내)", expiryCount, "info");
 
     var filtered = byBrand.filter(function (item) {
@@ -791,10 +798,12 @@
         expiryPill = '<span class="pill neutral">-</span>';
       }
       expiryPill += '<button type="button" class="edit-expiry-link" data-edit-expiry="' + item.barcode + '">수정</button>';
-      var statusLabel = item.status !== "danger" ? (item.status === "warn" ? "경고" : "정상")
+      var statusLabel = item.status === "warn" ? "경고(수요)"
+        : item.status !== "danger" ? "정상"
         : (item.remaining <= 0 ? "품절" : item.stockoutRisk && !(item.dangerQty > 0 && item.remaining <= item.dangerQty) ? "품절위험(수요)" : "위험");
+      var statusTitle = "최근 " + STOCKOUT_RISK_DAYS + "일 출고 " + item.recent7d + "개 · 최근 " + WARN_RISK_DAYS + "일 출고 " + item.recent30d + "개";
       return "<tr>" +
-        '<td><span class="pill ' + item.status + '" title="최근 ' + STOCKOUT_RISK_DAYS + '일 출고 ' + item.recent7d + '개">' + statusLabel + "</span></td>" +
+        '<td><span class="pill ' + item.status + '" title="' + statusTitle + '">' + statusLabel + "</span></td>" +
         "<td>" + escapeHtml(item.name || "(이름없음)") + "</td>" +
         '<td class="mono">' + item.barcode + "</td>" +
         '<td class="mono">' + item.baseline + "</td>" +
