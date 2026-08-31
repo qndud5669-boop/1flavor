@@ -1009,6 +1009,7 @@
         state.baseline = { setAt: todayLabel(), fileName: file.name, items: items };
         state.outboundBatches = []; state.inboundBatches = [];
         renderAll(); persist();
+        alert("첨부 완료: " + file.name + "\n기초재고 " + Object.keys(items).length + "개 품목으로 새로 설정됐습니다.\n(출고/입고 내역은 초기화됐습니다)");
       } catch (err) { alert(err.message); }
     });
   }
@@ -1020,6 +1021,7 @@
         var total = rows.reduce(function (s, r) { return s + r.qty; }, 0);
         state.outboundBatches.push({ id: uid(), uploadedAt: todayLabel(), fileName: file.name, rows: rows, totalQty: total });
         renderAll(); persist();
+        alert("첨부 완료: " + file.name + "\n출고 " + rows.length + "건, 총 " + total + "개 반영됐습니다.");
       } catch (err) { alert(err.message); }
     });
   }
@@ -1031,6 +1033,7 @@
         var total = rows.reduce(function (s, r) { return s + r.qty; }, 0);
         state.inboundBatches.push({ id: uid(), uploadedAt: todayLabel(), fileName: file.name, rows: rows, totalQty: total });
         renderAll(); persist();
+        alert("첨부 완료: " + file.name + "\n입고 " + rows.length + "건, 총 " + total + "개 반영됐습니다.");
       } catch (err) { alert(err.message); }
     });
   }
