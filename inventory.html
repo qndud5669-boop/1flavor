@@ -647,6 +647,11 @@
     var thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - (WARN_RISK_DAYS - 1));
     var cutoff30 = thirtyDaysAgo.getFullYear() + "-" + String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0") + "-" + String(thirtyDaysAgo.getDate()).padStart(2, "0");
+    // 기초재고를 설정한 지 며칠 안 됐으면(예: 오늘 막 리셋) 출고 데이터가 하루이틀치뿐이라
+    // 주말 몰아치기 같은 것 때문에 품절위험/경고가 잘못 뜰 수 있어서, 최소 며칠치 데이터가 쌓이기 전엔 판정하지 않음
+    var MIN_TREND_DAYS = 3;
+    var daysSinceBaseline = state.baseline.setAt ? Math.floor((new Date() - new Date(state.baseline.setAt)) / 86400000) + 1 : 999;
+    var trendReady = daysSinceBaseline >= MIN_TREND_DAYS;
 
     var nameIndex = {};
     var coreIndex = {};
@@ -710,9 +715,10 @@
           v.stockOverridden = true;
         }
         // 품절/위험: 최근 1주일 출고량을 앞으로 1주일 예상 수요로 보고, 남은재고가 그보다 적으면 위험
-        v.stockoutRisk = v.recent7d > 0 && v.remaining < v.recent7d;
+        // (기초재고 설정한 지 얼마 안 됐으면 데이터가 부족해서 판정 안 함 - 주말 몰아치기 출고 등으로 오탐 방지)
+        v.stockoutRisk = trendReady && v.recent7d > 0 && v.remaining < v.recent7d;
         // 경고: 최근 1개월 출고량을 앞으로 1개월 예상 수요로 보고, 남은재고가 그보다 적으면 경고
-        v.warnRisk = v.recent30d > 0 && v.remaining < v.recent30d;
+        v.warnRisk = trendReady && v.recent30d > 0 && v.remaining < v.recent30d;
         if (v.remaining <= 0) v.status = "danger";
         else if (v.dangerQty > 0 && v.remaining <= v.dangerQty) v.status = "danger";
         else if (v.stockoutRisk) v.status = "danger";
@@ -724,7 +730,8 @@
         if (state.manualExpiry && state.manualExpiry[v.barcode] && state.manualExpiry[v.barcode].length) {
           var haveDates = v.expiries.map(function (e) { return e.date; });
           state.manualExpiry[v.barcode].forEach(function (e) {
-            if (haveDates.indexOf(e.date) === -1) v.expiries.push(e);
+            // 반드시 복사본을 넣어야 함 - 원본을 그대로 넣으면 아래 선입선출 차감이 저장된 state.manualExpiry 원본까지 그대로 바꿔버림
+            if (haveDates.indexOf(e.date) === -1) v.expiries.push({ date: e.date, qty: e.qty });
           });
         }
         v.expiries.sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
