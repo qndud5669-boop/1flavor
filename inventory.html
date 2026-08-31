@@ -7,182 +7,252 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
-    --bg: #f7f7f5;
+    --bg: #f5f3ee;
     --surface: #ffffff;
-    --surface-sunken: #f0efec;
-    --ink: #1e1e1c;
-    --ink-soft: #63615b;
-    --ink-faint: #97948c;
-    --border: #e2e0da;
-    --accent: #2f6690;
-    --accent-soft: #dfe9f0;
+    --surface-sunken: #eeebe3;
+    --ink: #221f1a;
+    --ink-soft: #5d584e;
+    --ink-faint: #928c7e;
+    --border: #e2ddd0;
+    --border-strong: #cfc7b4;
+    --accent: #1f5c73;
+    --accent-2: #b3762c;
+    --accent-soft: #dde9ec;
     --ok: #2f7a4f;
     --ok-soft: #e3f0e7;
-    --warn: #a3760f;
-    --warn-soft: #faf0d9;
-    --danger: #b23a2e;
-    --danger-soft: #f7e3e0;
-    --info: #5b4a9c;
-    --info-soft: #eae5f5;
-    --shadow: 0 1px 2px rgba(30,30,28,0.04), 0 6px 20px -10px rgba(30,30,28,0.15);
+    --warn: #b5691a;
+    --warn-soft: #f8e9d6;
+    --danger: #a4332a;
+    --danger-soft: #f5e0dd;
+    --info: #6a3f9e;
+    --info-soft: #ece2f6;
+    --shadow-sm: 0 1px 2px rgba(34,31,26,0.05);
+    --shadow: 0 1px 2px rgba(34,31,26,0.04), 0 10px 28px -14px rgba(34,31,26,0.22);
+    --shadow-lift: 0 4px 8px rgba(34,31,26,0.06), 0 16px 36px -16px rgba(34,31,26,0.28);
+    --radius: 12px;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #17140f; --surface: #201c16; --surface-sunken: #292420;
-      --ink: #efece4; --ink-soft: #b3aca0; --ink-faint: #777165; --border: #38322a;
-      --accent: #7fb0d9; --accent-soft: #1c2e3a;
-      --ok: #6fbf8c; --ok-soft: #1e2c22; --warn: #d9ac4c; --warn-soft: #332a14;
-      --danger: #e0847a; --danger-soft: #35211d;
-      --info: #a99ce0; --info-soft: #2a2440;
-      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px -10px rgba(0,0,0,0.6);
+      --bg: #14120e; --surface: #1d1a15; --surface-sunken: #26221b;
+      --ink: #efece3; --ink-soft: #b6ae9d; --ink-faint: #7d7666; --border: #37322a; --border-strong: #4a4335;
+      --accent: #6fb2c9; --accent-2: #dba55c; --accent-soft: #203038;
+      --ok: #7cc498; --ok-soft: #1d2c22; --warn: #e0a75f; --warn-soft: #332711;
+      --danger: #e08d82; --danger-soft: #34211d;
+      --info: #b39ce0; --info-soft: #29213c;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px -14px rgba(0,0,0,0.55);
+      --shadow-lift: 0 4px 8px rgba(0,0,0,0.35), 0 16px 36px -16px rgba(0,0,0,0.7);
     }
   }
   :root[data-theme="dark"] {
-    --bg: #17140f; --surface: #201c16; --surface-sunken: #292420;
-    --ink: #efece4; --ink-soft: #b3aca0; --ink-faint: #777165; --border: #38322a;
-    --accent: #7fb0d9; --accent-soft: #1c2e3a;
-    --ok: #6fbf8c; --ok-soft: #1e2c22; --warn: #d9ac4c; --warn-soft: #332a14;
-    --danger: #e0847a; --danger-soft: #35211d;
-    --info: #a99ce0; --info-soft: #2a2440;
-    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 6px 20px -10px rgba(0,0,0,0.6);
+    --bg: #14120e; --surface: #1d1a15; --surface-sunken: #26221b;
+    --ink: #efece3; --ink-soft: #b6ae9d; --ink-faint: #7d7666; --border: #37322a; --border-strong: #4a4335;
+    --accent: #6fb2c9; --accent-2: #dba55c; --accent-soft: #203038;
+    --ok: #7cc498; --ok-soft: #1d2c22; --warn: #e0a75f; --warn-soft: #332711;
+    --danger: #e08d82; --danger-soft: #34211d;
+    --info: #b39ce0; --info-soft: #29213c;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 10px 28px -14px rgba(0,0,0,0.55);
+    --shadow-lift: 0 4px 8px rgba(0,0,0,0.35), 0 16px 36px -16px rgba(0,0,0,0.7);
   }
 
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
     font-family: "Noto Sans KR", "Malgun Gothic", sans-serif;
     font-size: 14.5px; line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
   }
   img { max-width: 100%; }
   [hidden] { display: none !important; }
   .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  ::selection { background: var(--accent-soft); }
+  button { font-family: inherit; }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   #login-screen {
-    position: fixed; inset: 0; background: var(--bg);
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 45%),
+      radial-gradient(circle at 85% 80%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 45%),
+      var(--bg);
     display: flex; align-items: center; justify-content: center; z-index: 100;
   }
   .login-card {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
-    padding: 36px 32px; width: 320px; box-shadow: var(--shadow);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    padding: 40px 34px; width: 320px; box-shadow: var(--shadow-lift);
   }
-  .login-card h1 { font-size: 17px; margin: 0 0 4px; }
-  .login-card p { font-size: 12.5px; color: var(--ink-faint); margin: 0 0 20px; }
+  .login-card h1 { font-family: "Gowun Batang", serif; font-size: 20px; margin: 0 0 5px; letter-spacing: -0.01em; }
+  .login-card p { font-size: 12.5px; color: var(--ink-faint); margin: 0 0 22px; }
   .login-card input {
-    width: 100%; padding: 10px 12px; margin-bottom: 10px; border-radius: 8px;
-    border: 1px solid var(--border); background: var(--surface-sunken); color: var(--ink); font-size: 14px;
+    width: 100%; padding: 11px 13px; margin-bottom: 10px; border-radius: 9px;
+    border: 1.5px solid var(--border); background: var(--surface-sunken); color: var(--ink); font-size: 14px;
+    transition: border-color .15s;
   }
+  .login-card input:focus { border-color: var(--accent); outline: none; }
   .login-card button {
-    width: 100%; padding: 10px; border-radius: 8px; border: none;
-    background: var(--accent); color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 6px;
+    width: 100%; padding: 11px; border-radius: 9px; border: none;
+    background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; margin-top: 8px;
+    letter-spacing: 0.01em; transition: filter .15s, transform .1s;
   }
+  .login-card button:hover { filter: brightness(1.08); }
+  .login-card button:active { transform: translateY(1px); }
   #login-error { color: var(--danger); font-size: 12.5px; margin-top: 8px; display: none; }
 
   #app { display: none; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 80px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 32px 20px 90px; }
 
-  header.top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
-  header.top h1 { font-size: 19px; margin: 0; }
-  header.top .sub { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
-  .logout-btn { font-size: 12px; color: var(--ink-faint); background: none; border: 1px solid var(--border); border-radius: 100px; padding: 5px 12px; cursor: pointer; }
-
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
-  .tab-btn {
-    padding: 10px 16px; font-size: 14px; font-weight: 500; color: var(--ink-soft);
-    background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px;
+  header.top { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 26px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+  header.top .brand { display: flex; align-items: center; gap: 11px; }
+  header.top .brand-mark {
+    width: 36px; height: 36px; border-radius: 10px; flex: 0 0 auto;
+    background: linear-gradient(155deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--accent-2)));
+    display: flex; align-items: center; justify-content: center; font-size: 17px; box-shadow: var(--shadow-sm);
   }
+  header.top h1 { font-family: "Gowun Batang", serif; font-size: 21px; margin: 0; letter-spacing: -0.01em; }
+  header.top .sub { font-size: 12px; color: var(--ink-faint); margin-top: 3px; }
+  .logout-btn {
+    font-size: 12px; color: var(--ink-soft); background: var(--surface); border: 1px solid var(--border);
+    border-radius: 100px; padding: 6px 14px; cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  .logout-btn:hover { background: var(--surface-sunken); border-color: var(--border-strong); }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab-btn {
+    padding: 11px 18px; font-size: 14px; font-weight: 500; color: var(--ink-faint);
+    background: none; border: none; border-bottom: 2.5px solid transparent; cursor: pointer; margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+  }
+  .tab-btn:hover { color: var(--ink-soft); }
   .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
   .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+  .tab-panel.active { display: block; animation: fade-in .25s ease; }
+  @keyframes fade-in { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
 
-  .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+  .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 22px; }
   .stat {
-    background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 14px 16px;
-    box-shadow: var(--shadow); cursor: pointer; text-align: left; font-family: inherit;
+    position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px 16px 20px;
+    box-shadow: var(--shadow); cursor: pointer; text-align: left; font-family: inherit; overflow: hidden;
+    transition: box-shadow .15s, transform .15s, border-color .15s;
   }
-  .stat .label { font-size: 11.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .03em; }
-  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
-  .stat.active { border-color: var(--accent); }
+  .stat::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--tone, var(--ink-faint)); opacity: .55; }
+  .stat:hover { box-shadow: var(--shadow-lift); transform: translateY(-1px); }
+  .stat .label { font-size: 11.5px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .stat .value { font-family: "JetBrains Mono", monospace; font-size: 24px; font-weight: 700; margin-top: 5px; }
+  .stat.active { border-color: var(--tone, var(--accent)); box-shadow: var(--shadow-lift); }
+  .stat.active::before { opacity: 1; }
   @media (max-width: 720px) { .stat-row { grid-template-columns: repeat(2,1fr); } }
 
-  .brand-row { display: flex; gap: 6px; margin-bottom: 16px; }
+  .brand-row { display: flex; gap: 6px; margin-bottom: 18px; }
   .brand-btn {
-    font-size: 13px; font-weight: 600; padding: 7px 16px; border-radius: 8px;
+    font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 9px;
     border: 1.5px solid var(--border); background: var(--surface); color: var(--ink-soft); cursor: pointer;
+    transition: background .15s, border-color .15s, color .15s;
   }
+  .brand-btn:hover { border-color: var(--border-strong); }
   .brand-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
   .search-input {
-    flex: 1; min-width: 180px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
-    background: var(--surface); color: var(--ink); font-size: 13.5px;
+    flex: 1; min-width: 180px; padding: 9px 13px; border-radius: 9px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--ink); font-size: 13.5px; transition: border-color .15s;
   }
+  .search-input:focus { border-color: var(--accent); outline: none; }
   .filter-chip {
-    font-size: 12.5px; padding: 5px 11px; border-radius: 100px; border: 1px solid var(--border);
-    background: var(--surface); color: var(--ink-soft); cursor: pointer;
+    font-size: 12.5px; font-weight: 600; padding: 6px 13px; border-radius: 100px; border: 1.5px solid var(--border);
+    background: var(--surface); color: var(--ink-soft); cursor: pointer; transition: all .15s;
   }
-  .filter-chip.active { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+  .filter-chip:hover { border-color: var(--border-strong); }
+  .filter-chip.active { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 
   .upload-box {
-    border: 1.5px dashed var(--border); border-radius: 12px; padding: 20px; text-align: center;
-    background: var(--surface); margin-bottom: 18px;
+    border: 1.5px dashed var(--border-strong); border-radius: var(--radius); padding: 22px; text-align: center;
+    background: var(--surface); margin-bottom: 20px; transition: border-color .15s, background .15s;
   }
+  .upload-box:hover { border-color: var(--accent); background: var(--accent-soft); }
   .upload-box .btn {
-    display: inline-block; background: var(--accent); color: #fff; font-weight: 600; font-size: 13.5px;
-    padding: 9px 18px; border-radius: 8px; cursor: pointer; border: none;
+    display: inline-block; background: var(--accent); color: #fff; font-weight: 700; font-size: 13.5px;
+    padding: 10px 20px; border-radius: 9px; cursor: pointer; border: none; letter-spacing: 0.01em;
+    box-shadow: var(--shadow-sm); transition: filter .15s, transform .1s;
   }
+  .upload-box .btn:hover { filter: brightness(1.08); }
+  .upload-box .btn:active { transform: translateY(1px); }
   .upload-box input[type=file] { display: none; }
-  .upload-box .hint { font-size: 12px; color: var(--ink-faint); margin-top: 8px; }
+  .upload-box .hint { font-size: 12px; color: var(--ink-faint); margin-top: 10px; }
 
-  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); background: var(--surface); }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); background: var(--surface); }
   table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
   thead th {
-    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; color: var(--ink-faint);
-    background: var(--surface-sunken); padding: 9px 12px; border-bottom: 1px solid var(--border); white-space: nowrap;
+    text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-faint); font-weight: 700;
+    background: var(--surface-sunken); padding: 11px 14px; border-bottom: 1px solid var(--border); white-space: nowrap;
   }
-  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody td { padding: 11px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tbody tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background .1s; }
   tbody tr:hover { background: var(--surface-sunken); }
 
-  .pill { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 9px; border-radius: 100px; white-space: nowrap; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 100px; white-space: nowrap; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 auto; }
   .pill.ok { background: var(--ok-soft); color: var(--ok); }
   .pill.warn { background: var(--warn-soft); color: var(--warn); }
   .pill.danger { background: var(--danger-soft); color: var(--danger); }
   .pill.info { background: var(--info-soft); color: var(--info); }
   .pill.neutral { background: var(--surface-sunken); color: var(--ink-faint); }
+  .pill.neutral::before { display: none; }
 
   .batch-card {
     display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; margin-bottom: 8px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; margin-bottom: 9px;
+    box-shadow: var(--shadow-sm); transition: box-shadow .15s;
   }
-  .batch-card .meta { font-size: 12.5px; color: var(--ink-faint); }
-  .batch-card .name { font-weight: 600; font-size: 13.5px; }
-  .del-btn { font-size: 12px; color: var(--danger); background: none; border: 1px solid var(--border); border-radius: 100px; padding: 4px 12px; cursor: pointer; }
+  .batch-card:hover { box-shadow: var(--shadow); }
+  .batch-card .meta { font-size: 12.5px; color: var(--ink-faint); margin-top: 2px; }
+  .batch-card .name { font-weight: 700; font-size: 13.5px; }
+  .del-btn { font-size: 12px; color: var(--danger); background: none; border: 1px solid var(--border); border-radius: 100px; padding: 5px 13px; cursor: pointer; transition: background .15s; }
+  .del-btn:hover { background: var(--danger-soft); }
 
-  .empty { text-align: center; color: var(--ink-faint); font-size: 13px; padding: 28px 0; }
-  .save-status { position: fixed; bottom: 18px; right: 18px; font-size: 12px; color: var(--ink-faint); background: var(--surface); border: 1px solid var(--border); padding: 6px 12px; border-radius: 100px; box-shadow: var(--shadow); opacity: 0; transition: opacity .3s; }
-  .save-status.show { opacity: 1; }
+  .empty { text-align: center; color: var(--ink-faint); font-size: 13px; padding: 32px 0; }
+  .save-status {
+    position: fixed; bottom: 20px; right: 20px; font-size: 12px; font-weight: 600; color: var(--ok); background: var(--surface);
+    border: 1px solid var(--border); padding: 8px 16px; border-radius: 100px; box-shadow: var(--shadow-lift);
+    opacity: 0; transform: translateY(6px); transition: opacity .25s, transform .25s; display: flex; align-items: center; gap: 6px;
+  }
+  .save-status::before { content: "✓"; }
+  .save-status.show { opacity: 1; transform: none; }
 
-  .edit-expiry-link { font-size: 11.5px; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0; margin-left: 2px; text-decoration: underline; }
+  .edit-expiry-link {
+    font-size: 11px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border: none; border-radius: 100px;
+    cursor: pointer; padding: 2px 9px; margin-left: 3px; transition: filter .15s;
+  }
+  .edit-expiry-link:hover { filter: brightness(0.95); }
 
-  .modal-overlay { position: fixed; inset: 0; background: rgba(20,18,14,0.5); display: flex; align-items: center; justify-content: center; z-index: 200; }
-  .modal-card { background: var(--surface); border-radius: 14px; padding: 24px; width: 380px; max-width: calc(100vw - 40px); box-shadow: var(--shadow); }
-  .modal-card h3 { margin: 0 0 2px; font-size: 15.5px; }
-  .modal-card .modal-sub { font-size: 12px; color: var(--ink-faint); margin-bottom: 16px; }
-  .lot-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(20,18,14,0.55); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center; z-index: 200; animation: fade-in .15s ease;
+  }
+  .modal-card { background: var(--surface); border-radius: 16px; padding: 26px; width: 380px; max-width: calc(100vw - 40px); box-shadow: var(--shadow-lift); border: 1px solid var(--border); }
+  .modal-card h3 { font-family: "Gowun Batang", serif; margin: 0 0 3px; font-size: 17px; }
+  .modal-card .modal-sub { font-size: 12px; color: var(--ink-faint); margin-bottom: 18px; }
+  .lot-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
   .lot-row .lot-date { font-family: "JetBrains Mono", monospace; font-size: 13px; flex: 1; }
   .lot-row .lot-qty { font-size: 12px; color: var(--ink-faint); }
-  .lot-remove { font-size: 15px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 2px 6px; }
+  .lot-remove { font-size: 16px; line-height: 1; color: var(--danger); background: none; border: none; cursor: pointer; padding: 3px 7px; border-radius: 6px; transition: background .15s; }
+  .lot-remove:hover { background: var(--danger-soft); }
   .lot-empty { font-size: 12.5px; color: var(--ink-faint); padding: 10px 0; }
-  .lot-add-row { display: flex; gap: 6px; margin-top: 14px; }
+  .lot-add-row { display: flex; gap: 6px; margin-top: 16px; }
   .lot-add-row input {
-    padding: 7px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface-sunken); color: var(--ink); font-size: 13px;
+    padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface-sunken); color: var(--ink); font-size: 13px;
+    transition: border-color .15s;
   }
+  .lot-add-row input:focus { border-color: var(--accent); outline: none; }
   .lot-add-row input.date-input { flex: 1.4; }
   .lot-add-row input.qty-input { flex: 1; }
-  .lot-add-row button { padding: 7px 14px; border-radius: 7px; border: none; background: var(--accent); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; }
-  .modal-close { width: 100%; margin-top: 16px; padding: 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-soft); font-size: 13.5px; cursor: pointer; }
+  .lot-add-row button { padding: 8px 15px; border-radius: 8px; border: none; background: var(--accent); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer; transition: filter .15s; }
+  .lot-add-row button:hover { filter: brightness(1.08); }
+  .modal-close { width: 100%; margin-top: 18px; padding: 10px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-soft); font-size: 13.5px; cursor: pointer; transition: background .15s; }
+  .modal-close:hover { background: var(--surface-sunken); }
 </style>
 </head>
 <body>
@@ -201,9 +271,12 @@
 <div id="app">
   <div class="wrap">
     <header class="top">
-      <div>
-        <h1>첫맛 재고 트래커</h1>
-        <div class="sub" id="last-updated">불러오는 중...</div>
+      <div class="brand">
+        <div class="brand-mark">🍶</div>
+        <div>
+          <h1>첫맛 재고 트래커</h1>
+          <div class="sub" id="last-updated">불러오는 중...</div>
+        </div>
       </div>
       <button class="logout-btn" id="logout-btn">로그아웃</button>
     </header>
@@ -406,6 +479,19 @@
     return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true });
   }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  // 출고일자를 "YYYY-MM-DD"로 통일 (엑셀 일련번호/문자열 둘 다 처리)
+  function normalizeDateVal(v) {
+    if (v === "" || v === null || v === undefined) return "";
+    if (typeof v === "number") {
+      var d = new Date(Date.UTC(1899, 11, 30) + v * 86400000);
+      return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
+    }
+    var s = String(v).trim();
+    var m = s.match(/(\d{4})[.\-\/](\d{1,2})[.\-\/](\d{1,2})/);
+    if (m) return m[1] + "-" + m[2].padStart(2, "0") + "-" + m[3].padStart(2, "0");
+    return s;
+  }
   function todayLabel() {
     var d = new Date();
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
@@ -442,7 +528,7 @@
     for (var i = 1; i < rows.length; i++) {
       var r = rows[i]; var barcode = r[idx.barcode];
       if (!barcode) continue;
-      out.push({ barcode: String(barcode), name: idx.name !== -1 ? (r[idx.name] || "") : "", qty: Number(r[idx.qty]) || 0, date: idx.date !== -1 ? (r[idx.date] || "") : "" });
+      out.push({ barcode: String(barcode), name: idx.name !== -1 ? (r[idx.name] || "") : "", qty: Number(r[idx.qty]) || 0, date: idx.date !== -1 ? normalizeDateVal(r[idx.date]) : "" });
     }
     return out;
   }
@@ -467,23 +553,30 @@
   // ---------- 계산 ----------
   var currentFilter = "all", currentSearch = "", currentSort = "remaining", currentBrand = "all";
 
+  var STOCKOUT_RISK_DAYS = 7; // 최근 N일 출고량을 앞으로 N일 예상 수요로 보고 재고 위험 판정
+
   function computeStock() {
     var map = {};
     if (!state.baseline) return [];
+    var sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - (STOCKOUT_RISK_DAYS - 1));
+    var cutoff = sevenDaysAgo.getFullYear() + "-" + String(sevenDaysAgo.getMonth() + 1).padStart(2, "0") + "-" + String(sevenDaysAgo.getDate()).padStart(2, "0");
+
     Object.keys(state.baseline.items).forEach(function (barcode) {
       var b = state.baseline.items[barcode];
-      map[barcode] = { barcode: barcode, name: b.name, baseline: b.qty, warnQty: b.warnQty, dangerQty: b.dangerQty, outbound: 0, inbound: 0, expiries: [] };
+      map[barcode] = { barcode: barcode, name: b.name, baseline: b.qty, warnQty: b.warnQty, dangerQty: b.dangerQty, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
     });
     state.outboundBatches.forEach(function (batch) {
       batch.rows.forEach(function (r) {
-        if (!map[r.barcode]) map[r.barcode] = { barcode: r.barcode, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, expiries: [] };
+        if (!map[r.barcode]) map[r.barcode] = { barcode: r.barcode, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
         map[r.barcode].outbound += r.qty;
+        if (r.date && r.date >= cutoff) map[r.barcode].recent7d += r.qty;
         if (r.name && !map[r.barcode].name) map[r.barcode].name = r.name;
       });
     });
     state.inboundBatches.forEach(function (batch) {
       batch.rows.forEach(function (r) {
-        if (!map[r.barcode]) map[r.barcode] = { barcode: r.barcode, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, expiries: [] };
+        if (!map[r.barcode]) map[r.barcode] = { barcode: r.barcode, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, expiries: [] };
         map[r.barcode].inbound += r.qty;
         if (r.name && !map[r.barcode].name) map[r.barcode].name = r.name;
         if (r.expiry) map[r.barcode].expiries.push({ date: r.expiry, qty: r.qty });
@@ -494,8 +587,11 @@
       .map(function (k) {
         var v = map[k];
         v.remaining = v.baseline - v.outbound + v.inbound;
+        // 최근 7일 출고량을 앞으로 7일 예상 수요로 보고, 남은재고가 그보다 적으면 품절위험
+        v.stockoutRisk = v.recent7d > 0 && v.remaining < v.recent7d;
         if (v.remaining <= 0) v.status = "danger";
         else if (v.dangerQty > 0 && v.remaining <= v.dangerQty) v.status = "danger";
+        else if (v.stockoutRisk) v.status = "danger";
         else if (v.warnQty > 0 && v.remaining <= v.warnQty) v.status = "warn";
         else v.status = "ok";
 
@@ -529,9 +625,9 @@
   }
   function expiryTier(days) {
     if (days === null) return { cls: "neutral", label: "" };
-    if (days <= 30) return { cls: "danger", label: "극임박" };
-    if (days <= 90) return { cls: "warn", label: "초임박" };
-    if (days <= 180) return { cls: "info", label: "임박" };
+    if (days <= 30) return { cls: "info", label: "극임박" };
+    if (days <= 90) return { cls: "danger", label: "초임박" };
+    if (days <= 180) return { cls: "warn", label: "임박" };
     return { cls: "neutral", label: "정상" };
   }
   var JUSTOK_EXTRA_NAMES = ["양꼬치시즈닝"]; // 이름에 "저스톡"이 없지만 저스톡 브랜드로 분류할 품목
@@ -594,9 +690,10 @@
         expiryPill = '<span class="pill neutral">-</span>';
       }
       expiryPill += '<button type="button" class="edit-expiry-link" data-edit-expiry="' + item.barcode + '">수정</button>';
-      var statusLabel = item.status === "danger" ? "품절/위험" : item.status === "warn" ? "경고" : "정상";
+      var statusLabel = item.status !== "danger" ? (item.status === "warn" ? "경고" : "정상")
+        : (item.remaining <= 0 ? "품절" : item.stockoutRisk && !(item.dangerQty > 0 && item.remaining <= item.dangerQty) ? "품절위험(수요)" : "위험");
       return "<tr>" +
-        '<td><span class="pill ' + item.status + '">' + statusLabel + "</span></td>" +
+        '<td><span class="pill ' + item.status + '" title="최근 ' + STOCKOUT_RISK_DAYS + '일 출고 ' + item.recent7d + '개">' + statusLabel + "</span></td>" +
         "<td>" + escapeHtml(item.name || "(이름없음)") + "</td>" +
         '<td class="mono">' + item.barcode + "</td>" +
         '<td class="mono">' + item.baseline + "</td>" +
@@ -611,7 +708,7 @@
   function statCard(filterKey, label, value, tone) {
     var color = tone === "danger" ? "var(--danger)" : tone === "warn" ? "var(--warn)" : tone === "info" ? "var(--info)" : "var(--ink)";
     var active = currentFilter === filterKey ? " active" : "";
-    return '<button type="button" class="stat' + active + '" data-filter="' + filterKey + '"><div class="label">' + label +
+    return '<button type="button" class="stat' + active + '" data-filter="' + filterKey + '" style="--tone:' + color + '"><div class="label">' + label +
       '</div><div class="value" style="color:' + color + '">' + value + "</div></button>";
   }
 
