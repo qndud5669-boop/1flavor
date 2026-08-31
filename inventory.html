@@ -695,6 +695,10 @@
         }
         v.expiries.sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
         v.nearestExpiryDays = v.expiries.length ? expiryDays(v.expiries[0].date) : null;
+        // 여분재고(소비기한이 특정되지 않은 재고) = 현재고 - 소비기한별로 수량이 확인된 재고 합
+        // 즉 여분재고 + 임박재고(로트별 합) = 현재고 가 항상 성립하도록 자동 계산
+        v.lotQtySum = v.expiries.reduce(function (s, e) { return s + (e.qty || 0); }, 0);
+        v.spareQty = v.remaining - v.lotQtySum;
         return v;
       });
     if (currentSort === "expiry") {
@@ -772,7 +776,13 @@
     tbody.innerHTML = filtered.map(function (item) {
       var expiryPill;
       if (item.expiries && item.expiries.length) {
-        expiryPill = item.expiries.map(function (lot) {
+        // 여분재고(소비기한 미확정분) + 임박재고(로트별) = 현재고 가 되도록 여분재고를 맨 앞에 표시
+        var spareCls = item.spareQty < 0 ? "danger" : "neutral";
+        var spareTitle = item.spareQty < 0
+          ? "소비기한별 등록 수량 합(" + item.lotQtySum + "개)이 현재고(" + item.remaining + "개)보다 많습니다. 확인이 필요합니다."
+          : "현재고(" + item.remaining + "개) - 소비기한 확인된 재고(" + item.lotQtySum + "개)";
+        var sparePill = '<span class="pill ' + spareCls + '" style="margin:1px 3px 1px 0;" title="' + spareTitle + '">여분재고 ' + item.spareQty + "개</span>";
+        expiryPill = sparePill + item.expiries.map(function (lot) {
           var d = expiryDays(lot.date);
           var tier = expiryTier(d);
           var dLabel = d === null ? "" : " (D" + (d >= 0 ? "-" + d : "+" + -d) + ")";
