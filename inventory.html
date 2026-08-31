@@ -163,6 +163,26 @@
   .empty { text-align: center; color: var(--ink-faint); font-size: 13px; padding: 28px 0; }
   .save-status { position: fixed; bottom: 18px; right: 18px; font-size: 12px; color: var(--ink-faint); background: var(--surface); border: 1px solid var(--border); padding: 6px 12px; border-radius: 100px; box-shadow: var(--shadow); opacity: 0; transition: opacity .3s; }
   .save-status.show { opacity: 1; }
+
+  .edit-expiry-link { font-size: 11.5px; color: var(--accent); background: none; border: none; cursor: pointer; padding: 0; margin-left: 2px; text-decoration: underline; }
+
+  .modal-overlay { position: fixed; inset: 0; background: rgba(20,18,14,0.5); display: flex; align-items: center; justify-content: center; z-index: 200; }
+  .modal-card { background: var(--surface); border-radius: 14px; padding: 24px; width: 380px; max-width: calc(100vw - 40px); box-shadow: var(--shadow); }
+  .modal-card h3 { margin: 0 0 2px; font-size: 15.5px; }
+  .modal-card .modal-sub { font-size: 12px; color: var(--ink-faint); margin-bottom: 16px; }
+  .lot-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .lot-row .lot-date { font-family: "JetBrains Mono", monospace; font-size: 13px; flex: 1; }
+  .lot-row .lot-qty { font-size: 12px; color: var(--ink-faint); }
+  .lot-remove { font-size: 15px; color: var(--danger); background: none; border: none; cursor: pointer; padding: 2px 6px; }
+  .lot-empty { font-size: 12.5px; color: var(--ink-faint); padding: 10px 0; }
+  .lot-add-row { display: flex; gap: 6px; margin-top: 14px; }
+  .lot-add-row input {
+    padding: 7px 9px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface-sunken); color: var(--ink); font-size: 13px;
+  }
+  .lot-add-row input.date-input { flex: 1.4; }
+  .lot-add-row input.qty-input { flex: 1; }
+  .lot-add-row button { padding: 7px 14px; border-radius: 7px; border: none; background: var(--accent); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; }
+  .modal-close { width: 100%; margin-top: 16px; padding: 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-soft); font-size: 13.5px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -247,6 +267,20 @@
 
 <div class="save-status" id="save-status">저장됨</div>
 
+<div class="modal-overlay" id="expiry-modal" hidden>
+  <div class="modal-card">
+    <h3 id="expiry-modal-title">소비기한 관리</h3>
+    <div class="modal-sub" id="expiry-modal-sub"></div>
+    <div id="expiry-lot-list"></div>
+    <div class="lot-add-row">
+      <input type="text" id="expiry-new-date" class="date-input" placeholder="YY.MM.DD (예: 27.03.15)">
+      <input type="number" id="expiry-new-qty" class="qty-input" placeholder="수량(선택)">
+      <button type="button" id="expiry-add-btn">추가</button>
+    </div>
+    <button type="button" class="modal-close" id="expiry-modal-close">닫기</button>
+  </div>
+</div>
+
 <script>
 (function () {
   "use strict";
@@ -269,11 +303,13 @@
     "첫맛 양념치킨매운맛소스 440g",
     "첫맛 캡사이신매운맛소스 10kg",
     "첫맛 선물세트 6개입 카톤",
+    "양꼬치시즈닝",
+    "첫맛 꼬지소스 매운맛 460g",
   ];
 
   // 구글시트(재고 이슈품목-판매계획-현황) "소비기한 임박건" 시트에서 가져온 참고용 소비기한.
   // 실제 입고 엑셀을 첨부하면 그쪽 데이터가 우선하고, 없을 때만 이 값을 참고로 보여줌.
-  var SEED_EXPIRY = {"첫맛 내몸엔저당 저당불닭소스 345g":["26.10.19"],"첫맛 내몸엔저당 저당캡스파이시마요소스 300g":["26.10.20"],"첫맛 만능비빔&무침양념 30g":["26.12.04"],"첫맛 모밀소스 2.1kg":["26.12.11"],"첫맛 양념치킨매운맛소스 10kg":["26.12.12","28.01.22"],"첫맛 만능멸치육수 500g":["26.12.18"],"첫맛 만능비빔무침양념 550g":["26.12.19"],"첫맛 만능비빔무침양념 330g":["26.12.29"],"첫맛 모밀소스 1.05kg":["27.01.06","27.11.17"],"첫맛 타르타르드레싱소스 1.7kg":["27.01.15"],"첫맛 만능멸치육수 300g":["27.02.04"],"첫맛 돼지불고기 양념 2.1kg":["27.03.02","27.09.18"],"첫맛 돼지불고기양념 10kg":["27.03.03"],"첫맛 만능비빔&무침양념 1.1kg":["27.03.07","27.03.29","27.07.21"],"첫맛 돼지갈비양념 10kg":["27.03.10"],"첫맛 소갈비양념 10kg":["27.03.10"],"첫맛 바베큐소스 10kg":["27.03.24"],"첫맛 허니머스타드소스 1.85kg":["27.04.05"],"첫맛 캡사이신분말 1kg":["27.04.06"],"첫맛 캡사이신분말 400g":["27.04.09"],"첫맛 내몸엔저당 저당비빔무침양념 365g":["27.04.15"],"첫맛 내몸엔저당 저당양념치킨소스 345g":["27.04.16"],"첫맛 탕수육소스 1.85kg":["27.04.19","27.07.05"],"첫맛 만능김치찌개분말 500g":["27.04.23"],"첫맛 겨자머스타드소스 1kg":["27.04.26"],"첫맛 저당 떡볶이양념분말 500g":["27.04.26","27.06.16"],"첫맛 케이준드레싱소스 1.7kg":["27.05.14"],"첫맛 해파리겨자냉채소스 880g":["27.05.25"],"첫맛 돈까스소스 1.9kg":["27.05.25"],"첫맛 정통데리야끼소스 1.9kg":["27.05.28"],"첫맛 떡볶이양념분말(매운맛) 500g":["27.05.28"],"첫맛 만능치킨스톡 1kg":["27.05.28"],"첫맛 돈까스소스 990g":["27.06.03"],"첫맛 양념치킨순한맛소스 440g":["27.06.07"],"첫맛 떡볶이양념분말(매운맛) 1kg":["27.06.11"],"첫맛 떡볶이양념분말(순한맛) 1kg":["27.06.15","27.07.05"],"첫맛 떡볶이양념분말(순한맛) 500g":["27.06.15"],"첫맛 요리맛술 2kg":["27.06.21"],"첫맛 캡사이신매운맛소스 550g":["27.07.08"],"첫맛 만능해물육수 1kg":["27.07.13"],"첫맛 오뎅탕육수진국 1kg":["27.07.18"],"첫맛 닭강정순한맛소스 10kg":["27.07.20"],"첫맛 꼬지소스 순한맛 10kg":["27.07.21","27.11.27"],"첫맛 캡사이신매운맛소스 2kg":["27.07.27"],"첫맛 쭈낙볶음양념 2.1kg":["27.08.02","27.10.12"],"첫맛 가쓰오진국 2kg":["27.08.11","27.10.19"],"닭강정순한맛소스 2.1kg":["27.09.04"],"첫맛 닭강정순한맛소스 2.1kg":["27.09.04"],"첫맛 핫바베큐소스 2.05kg":["27.01.08","27.06.01","27.09.16"],"첫맛 마늘간장소스 1.05kg":["27.09.17","27.12.10"],"첫맛 돼지갈비양념 1.95kg":["27.09.18"],"첫맛 소갈비양념 2kg":["27.09.18"],"첫맛 양념치킨순한맛소스 530g":["27.09.24"],"첫맛 양념치킨매운맛소스 530g":["27.09.24"],"첫맛 꼬지소스순한맛 540g":["27.09.24"],"첫맛 꼬지소스매운맛 540g":["27.09.24"],"첫맛 파절이소스 970g":["27.10.06"],"첫맛 8배고농축냉면육수 1.1kg":["27.10.06","28.01.13"],"첫맛 만능멸치육수 1.95kg":["27.10.14"],"첫맛 꼬지소스 매운맛 2.1kg":["27.10.20","27.12.04","27.12.08"],"첫맛 꼬지소스매운맛 10kg":["27.10.20"],"첫맛 매운닭발양념 2kg":["27.10.20"],"첫맛 닭강정매운맛소스 2.1kg":["27.10.22"],"첫맛 양념치킨 순한맛소스 2.1kg":["27.10.26"],"첫맛 만능불볶음양념 2kg":["27.10.26"],"첫맛 소불고기양념 2kg":["27.11.11"],"첫맛 스위트칠리소스 2.05kg":["27.11.12"],"첫맛 우동다시 2kg":["27.11.19","27.12.04","27.12.17"],"첫맛 떡볶이비법양념 2.1kg":["27.11.20"],"첫맛 꼬지소스 순한맛 2.1kg":["27.11.20"],"첫맛 만능불볶음양념 1kg":["27.11.30"],"첫맛 양념치킨 매운맛소스 2.1kg":["27.12.04"],"첫맛 8배고농축냉면육수 2.1kg":["27.12.14","27.12.23"],"첫맛 양념치킨순한맛소스 10kg":["27.12.15"],"첫맛 만능멸치육수 10kg":["27.12.22"],"첫맛 만능비빔&무침양념 2.2kg":["27.11.27","27.12.03","27.12.30"],"첫맛 만능멸치육수 1kg":["28.01.02"],"첫맛 만능파절이소스 1.9kg":["28.01.05"],"첫맛 모밀소스 10kg":["28.01.22"],"첫맛 8배고농축냉면육수 10kg":["28.01.26"],"금실면 슈퍼용 450g":["28.02.08"]};
+  var SEED_EXPIRY = {"첫맛 내몸엔저당 저당불닭소스 345g":["26.10.19"],"첫맛 내몸엔저당 저당캡스파이시마요소스 300g":["26.10.20"],"첫맛 만능비빔&무침양념 30g":["26.12.04"],"첫맛 모밀소스 2.1kg":["26.12.11"],"첫맛 양념치킨매운맛소스 10kg":["26.12.12","28.01.22"],"첫맛 만능멸치육수 500g":["26.12.18"],"첫맛 만능비빔무침양념550g":["26.12.19"],"첫맛 만능 비빔무침양념 330g":["26.12.29"],"첫맛 모밀소스 1.05kg":["27.01.06","27.11.17"],"첫맛 타르타르드레싱소스 1.7kg":["27.01.15"],"첫맛 만능멸치육수 300g":["27.02.04"],"첫맛 돼지불고기 양념 2.1kg":["27.03.02","27.09.18"],"첫맛 돼지불고기양념 10kg":["27.03.03"],"첫맛 만능비빔&무침양념 1.1kg":["27.03.07","27.03.29","27.07.21"],"첫맛 돼지갈비양념 10kg":["27.03.10"],"첫맛 소갈비양념 10kg":["27.03.10"],"첫맛 바베큐소스 10kg":["27.03.24"],"첫맛 허니머스타드소스 1.85kg":["27.04.05"],"첫맛 캡사이신분말 1kg":["27.04.06"],"첫맛 캡사이신분말 400g":["27.04.09"],"첫맛 내몸엔저당 저당비빔무침양념 365g":["27.04.15"],"첫맛 내몸엔저당 저당양념치킨소스 345g":["27.04.16"],"첫맛 탕수육소스 1.85kg":["27.04.19","27.07.05"],"첫맛 만능김치찌개분말 500g":["27.04.23"],"첫맛 겨자머스타드소스 1kg":["27.04.26"],"첫맛 저당 떡볶이양념분말 500g":["27.04.26","27.06.16"],"첫맛 케이준드레싱소스 1.7kg":["27.05.14"],"첫맛 해파리겨자냉채소스 880g":["27.05.25"],"첫맛 돈까스소스 1.9kg":["27.05.25"],"첫맛 정통데리야끼소스 1.9kg":["27.05.28"],"첫맛 떡볶이양념분말(매운맛) 500g":["27.05.28"],"첫맛 만능치킨스톡 1kg":["27.05.28"],"첫맛 돈까스소스 990g":["27.06.03"],"첫맛 양념치킨순한맛소스 440g":["27.06.07"],"첫맛 떡볶이양념분말(매운맛) 1kg":["27.06.11"],"첫맛 떡볶이양념분말(순한맛) 1kg":["27.06.15","27.07.05"],"첫맛 떡볶이양념분말(순한맛) 500g":["27.06.15"],"첫맛 요리맛술 2kg":["27.06.21"],"첫맛 캡사이신매운맛소스 550g":["27.07.08"],"첫맛 만능해물육수 1kg":["27.07.13"],"첫맛 오뎅탕육수진국 1kg":["27.07.18"],"첫맛 닭강정순한맛소스 10kg":["27.07.20"],"첫맛 꼬지소스 순한맛 10kg":["27.07.21","27.11.27"],"첫맛 캡사이신매운맛소스 2kg":["27.07.27"],"첫맛 쭈낙볶음양념 2.1kg":["27.08.02","27.10.12"],"첫맛 가쓰오진국 2kg":["27.08.11","27.10.19"],"닭강정순한맛소스 2.1kg":["27.09.04"],"첫맛 닭강정순한맛소스 2.1kg":["27.09.04"],"첫맛 핫바베큐소스 2.05kg":["27.01.08","27.06.01","27.09.16"],"첫맛 마늘간장소스 1.05kg":["27.09.17","27.12.10"],"첫맛 돼지갈비양념 1.95kg":["27.09.18"],"첫맛 소갈비양념 2kg":["27.09.18"],"첫맛 양념치킨순한맛소스 530g":["27.09.24"],"첫맛 양념치킨매운맛소스 530g":["27.09.24"],"첫맛 꼬지소스순한맛 540g":["27.09.24"],"첫맛 꼬지소스매운맛 540g":["27.09.24"],"첫맛 파절이소스 970g":["27.10.06"],"첫맛 8배고농축냉면육수 1.1kg":["27.10.06","28.01.13"],"첫맛 만능멸치육수 1.95kg":["27.10.14"],"첫맛 꼬지소스 매운맛 2.1kg":["27.10.20","27.12.04","27.12.08"],"첫맛 꼬지소스매운맛 10kg":["27.10.20"],"첫맛 매운닭발양념 2kg":["27.10.20"],"첫맛 닭강정매운맛소스 2.1kg":["27.10.22"],"첫맛 양념치킨 순한맛소스 2.1kg":["27.10.26"],"첫맛 만능불볶음양념 2kg":["27.10.26"],"첫맛 소불고기양념 2kg":["27.11.11"],"첫맛 스위트칠리소스 2.05kg":["27.11.12"],"첫맛 우동다시 2kg":["27.11.19","27.12.04","27.12.17"],"첫맛 떡볶이비법양념 2.1kg":["27.11.20"],"첫맛 꼬지소스 순한맛 2.1kg":["27.11.20"],"첫맛 만능불볶음양념 1kg":["27.11.30"],"첫맛 양념치킨 매운맛소스 2.1kg":["27.12.04"],"첫맛 8배고농축냉면육수 2.1kg":["27.12.14","27.12.23"],"첫맛 양념치킨순한맛소스 10kg":["27.12.15"],"첫맛 만능멸치육수 10kg":["27.12.22"],"첫맛 만능비빔&무침양념 2.2kg":["27.11.27","27.12.03","27.12.30"],"첫맛 만능멸치육수 1kg":["28.01.02"],"첫맛 만능파절이소스 1.9kg":["28.01.05"],"첫맛 모밀소스 10kg":["28.01.22"],"첫맛 8배고농축냉면육수 10kg":["28.01.26"],"금실면 슈퍼용 450g":["28.02.08"]};
 
   async function loadState() {
     try {
@@ -325,7 +361,24 @@
     document.getElementById("login-screen").style.display = "none";
     document.getElementById("app").style.display = "block";
     await loadState();
+    migrateManualExpiry();
     renderAll();
+  }
+
+  // 최초 1회: 구글시트 참고 소비기한(SEED_EXPIRY, 상품명 기준)을 바코드 기준 수정가능 데이터로 옮겨줌.
+  // 이후로는 화면에서 직접 수정한 내용이 우선하고, 이 시드 상수는 다시 쓰이지 않음.
+  function migrateManualExpiry() {
+    if (state.manualExpiry) return;
+    state.manualExpiry = {};
+    if (state.baseline) {
+      Object.keys(state.baseline.items).forEach(function (barcode) {
+        var name = state.baseline.items[barcode].name;
+        if (SEED_EXPIRY[name]) {
+          state.manualExpiry[barcode] = SEED_EXPIRY[name].map(function (d) { return { date: d, qty: null }; });
+        }
+      });
+    }
+    persist();
   }
 
   try {
@@ -446,9 +499,9 @@
         else if (v.warnQty > 0 && v.remaining <= v.warnQty) v.status = "warn";
         else v.status = "ok";
 
-        // 실제 입고 엑셀로 들어온 소비기한이 없으면, 구글시트 참고자료(수량 미상)로 보충
-        if (v.expiries.length === 0 && SEED_EXPIRY[v.name]) {
-          v.expiries = SEED_EXPIRY[v.name].map(function (d) { return { date: d, qty: null, seed: true }; });
+        // 화면에서 직접 관리하는 소비기한(state.manualExpiry)이 있으면 그게 우선 (없으면 입고 엑셀 기준 유지)
+        if (state.manualExpiry && state.manualExpiry[v.barcode] !== undefined) {
+          v.expiries = state.manualExpiry[v.barcode].slice();
         }
         v.expiries.sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
         v.nearestExpiryDays = v.expiries.length ? expiryDays(v.expiries[0].date) : null;
@@ -481,7 +534,13 @@
     if (days <= 180) return { cls: "info", label: "임박" };
     return { cls: "neutral", label: "정상" };
   }
-  function brandOf(name) { return String(name || "").indexOf("저스톡") !== -1 ? "저스톡" : "첫맛"; }
+  var JUSTOK_EXTRA_NAMES = ["양꼬치시즈닝"]; // 이름에 "저스톡"이 없지만 저스톡 브랜드로 분류할 품목
+  function brandOf(name) {
+    var n = String(name || "");
+    if (n.indexOf("저스톡") !== -1) return "저스톡";
+    if (JUSTOK_EXTRA_NAMES.indexOf(n) !== -1) return "저스톡";
+    return "첫맛";
+  }
 
   // ---------- 렌더 ----------
   function renderAll() {
@@ -528,12 +587,13 @@
           var tier = expiryTier(d);
           var dLabel = d === null ? "" : " (D" + (d >= 0 ? "-" + d : "+" + -d) + ")";
           var tierLabel = tier.label ? tier.label + " " : "";
-          var qtyLabel = lot.qty === null || lot.qty === undefined ? " (참고)" : " · " + lot.qty + "개";
+          var qtyLabel = lot.qty === null || lot.qty === undefined ? "" : " · " + lot.qty + "개";
           return '<span class="pill ' + tier.cls + '" style="margin:1px 3px 1px 0;">' + tierLabel + lot.date + dLabel + qtyLabel + "</span>";
         }).join("");
       } else {
         expiryPill = '<span class="pill neutral">-</span>';
       }
+      expiryPill += '<button type="button" class="edit-expiry-link" data-edit-expiry="' + item.barcode + '">수정</button>';
       var statusLabel = item.status === "danger" ? "품절/위험" : item.status === "warn" ? "경고" : "정상";
       return "<tr>" +
         '<td><span class="pill ' + item.status + '">' + statusLabel + "</span></td>" +
@@ -570,6 +630,71 @@
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; });
   }
+
+  // ---------- 소비기한 편집 모달 ----------
+  var editingBarcode = null;
+
+  function openExpiryModal(barcode) {
+    editingBarcode = barcode;
+    if (!state.manualExpiry) state.manualExpiry = {};
+    if (!state.manualExpiry[barcode]) state.manualExpiry[barcode] = [];
+    var stock = computeStock();
+    var item = stock.filter(function (i) { return i.barcode === barcode; })[0];
+    document.getElementById("expiry-modal-sub").textContent = (item ? item.name : barcode) + " (" + barcode + ")";
+    renderExpiryModalList();
+    document.getElementById("expiry-new-date").value = "";
+    document.getElementById("expiry-new-qty").value = "";
+    document.getElementById("expiry-modal").hidden = false;
+  }
+
+  function closeExpiryModal() {
+    document.getElementById("expiry-modal").hidden = true;
+    editingBarcode = null;
+    renderStock();
+  }
+
+  function renderExpiryModalList() {
+    var lots = (state.manualExpiry[editingBarcode] || []).slice().sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
+    var list = document.getElementById("expiry-lot-list");
+    if (lots.length === 0) {
+      list.innerHTML = '<div class="lot-empty">등록된 소비기한이 없습니다.</div>';
+      return;
+    }
+    list.innerHTML = lots.map(function (lot, i) {
+      return '<div class="lot-row"><span class="lot-date">' + lot.date + '</span>' +
+        '<span class="lot-qty">' + (lot.qty === null || lot.qty === undefined ? "" : lot.qty + "개") + '</span>' +
+        '<button type="button" class="lot-remove" data-remove-lot="' + i + '">×</button></div>';
+    }).join("");
+  }
+
+  function isValidDateStr(s) {
+    return /^\d{2}\.\d{2}\.\d{2}$/.test(s);
+  }
+
+  document.getElementById("expiry-add-btn").addEventListener("click", function () {
+    var dateVal = document.getElementById("expiry-new-date").value.trim();
+    var qtyVal = document.getElementById("expiry-new-qty").value.trim();
+    if (!isValidDateStr(dateVal)) { alert("날짜는 YY.MM.DD 형식으로 입력해주세요 (예: 27.03.15)"); return; }
+    state.manualExpiry[editingBarcode].push({ date: dateVal, qty: qtyVal ? Number(qtyVal) : null });
+    document.getElementById("expiry-new-date").value = "";
+    document.getElementById("expiry-new-qty").value = "";
+    renderExpiryModalList();
+    persist();
+  });
+
+  document.getElementById("expiry-modal-close").addEventListener("click", closeExpiryModal);
+
+  document.getElementById("expiry-lot-list").addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-remove-lot]");
+    if (!btn || !editingBarcode) return;
+    var idx = Number(btn.dataset.removeLot);
+    var lots = state.manualExpiry[editingBarcode].slice().sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
+    var target = lots[idx];
+    var realIdx = state.manualExpiry[editingBarcode].indexOf(target);
+    if (realIdx !== -1) state.manualExpiry[editingBarcode].splice(realIdx, 1);
+    renderExpiryModalList();
+    persist();
+  });
 
   // ---------- 이벤트 ----------
   document.querySelectorAll(".tab-btn").forEach(function (btn) {
@@ -644,7 +769,9 @@
       return;
     }
     var statBtn = e.target.closest(".stat[data-filter]");
-    if (statBtn) { currentFilter = statBtn.dataset.filter; renderStock(); }
+    if (statBtn) { currentFilter = statBtn.dataset.filter; renderStock(); return; }
+    var editBtn = e.target.closest("[data-edit-expiry]");
+    if (editBtn) { openExpiryModal(editBtn.dataset.editExpiry); }
   });
 })();
 </script>
