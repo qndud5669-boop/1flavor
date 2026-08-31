@@ -541,6 +541,12 @@
     }
     return items;
   }
+  // 더존 출고 엑셀에 실제 상품이 아닌 회계성 항목(물류비, 할인쿠폰 등)이 품번을 달고 섞여 나오는 경우가 있어 제외
+  var NON_PRODUCT_NAME_HINTS = ["물류비", "쿠폰", "할인"];
+  function isNonProductRow(name) {
+    var n = String(name || "");
+    return NON_PRODUCT_NAME_HINTS.some(function (hint) { return n.indexOf(hint) !== -1; });
+  }
   function parseOutbound(wb) {
     var rows = sheetRows(wb);
     var header = rows[0] || [];
@@ -549,8 +555,10 @@
     var out = [];
     for (var i = 1; i < rows.length; i++) {
       var r = rows[i]; var barcode = r[idx.barcode];
-      if (!barcode) continue;
-      out.push({ barcode: String(barcode), name: idx.name !== -1 ? (r[idx.name] || "") : "", qty: Number(r[idx.qty]) || 0, date: idx.date !== -1 ? normalizeDateVal(r[idx.date]) : "" });
+      var name = idx.name !== -1 ? (r[idx.name] || "") : "";
+      // 소계/합계 행(품번 또는 품명이 비어있음)과 물류비/할인쿠폰 같은 비상품 행은 건너뜀
+      if (!barcode || !name || isNonProductRow(name)) continue;
+      out.push({ barcode: String(barcode), name: name, qty: Number(r[idx.qty]) || 0, date: idx.date !== -1 ? normalizeDateVal(r[idx.date]) : "" });
     }
     return out;
   }
@@ -622,6 +630,13 @@
   function normalizeProductName(name) {
     return String(name || "").replace(/\s+/g, "").replace(/[()]/g, "").toLowerCase();
   }
+  // "첫맛"/"저스톡" 같은 브랜드 접두어가 파일마다 있다 없다 해서, 이름 매칭이 안 될 때 이거 뗀 걸로도 한번 더 시도
+  var BRAND_PREFIXES = ["첫맛", "저스톡", "면세"];
+  function coreProductName(name) {
+    var n = normalizeProductName(name);
+    BRAND_PREFIXES.forEach(function (b) { n = n.split(b).join(""); });
+    return n;
+  }
 
   function computeStock() {
     var map = {};
@@ -634,16 +649,21 @@
     var cutoff30 = thirtyDaysAgo.getFullYear() + "-" + String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0") + "-" + String(thirtyDaysAgo.getDate()).padStart(2, "0");
 
     var nameIndex = {};
+    var coreIndex = {};
     Object.keys(state.baseline.items).forEach(function (barcode) {
       var b = state.baseline.items[barcode];
       map[barcode] = { barcode: barcode, name: b.name, baseline: b.qty, warnQty: b.warnQty, dangerQty: b.dangerQty, outbound: 0, inbound: 0, recent7d: 0, recent30d: 0, expiries: [] };
       var norm = normalizeProductName(b.name);
       if (norm && !nameIndex[norm]) nameIndex[norm] = barcode;
+      var core = coreProductName(b.name);
+      if (core && !coreIndex[core]) coreIndex[core] = barcode;
     });
     function resolveKey(barcode, name) {
       if (map[barcode]) return barcode;
       var norm = normalizeProductName(name);
       if (norm && nameIndex[norm]) return nameIndex[norm];
+      var core = coreProductName(name);
+      if (core && coreIndex[core]) return coreIndex[core];
       return barcode;
     }
     state.outboundBatches.forEach(function (batch) {
