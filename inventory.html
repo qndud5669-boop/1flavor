@@ -409,7 +409,13 @@
     }
   }
 
-  async function persist() {
+  // 연속으로 여러 번 저장이 호출돼도(로트 여러 개 빠르게 추가 등) 겹치지 않고 순서대로 실행되게 큐로 관리
+  var persistQueue = Promise.resolve();
+  function persist() {
+    persistQueue = persistQueue.then(doPersist, doPersist);
+    return persistQueue;
+  }
+  async function doPersist() {
     try {
       var res = await fetch(WORKER_URL, {
         method: "PUT",
