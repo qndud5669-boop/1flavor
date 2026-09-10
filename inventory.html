@@ -646,6 +646,14 @@
     BRAND_PREFIXES.forEach(function (b) { n = n.split(b).join(""); });
     return n;
   }
+  // 브랜드까지 떼도 안 맞을 때 최후 수단 - "만능" 같이 시스템마다 붙이거나 빼는 수식어까지 떼고 한 번 더 시도
+  // (예: 더존은 "첫맛 만능파절이소스 970g", 기초재고는 "첫맛 파절이소스 970g"로 서로 다르게 부르는 경우)
+  var NOISE_WORDS = ["만능"];
+  function looseProductName(name) {
+    var n = coreProductName(name);
+    NOISE_WORDS.forEach(function (w) { n = n.split(w).join(""); });
+    return n;
+  }
 
   function computeStock() {
     var map = {};
@@ -664,6 +672,7 @@
 
     var nameIndex = {};
     var coreIndex = {};
+    var looseIndex = {};
     Object.keys(state.baseline.items).forEach(function (barcode) {
       var b = state.baseline.items[barcode];
       map[barcode] = { barcode: barcode, name: b.name, baseline: b.qty, warnQty: b.warnQty, dangerQty: b.dangerQty, outbound: 0, inbound: 0, recent7d: 0, recent30d: 0, expiries: [] };
@@ -671,6 +680,8 @@
       if (norm && !nameIndex[norm]) nameIndex[norm] = barcode;
       var core = coreProductName(b.name);
       if (core && !coreIndex[core]) coreIndex[core] = barcode;
+      var loose = looseProductName(b.name);
+      if (loose && !looseIndex[loose]) looseIndex[loose] = barcode;
     });
     function resolveKey(barcode, name) {
       if (map[barcode]) return barcode;
@@ -678,6 +689,8 @@
       if (norm && nameIndex[norm]) return nameIndex[norm];
       var core = coreProductName(name);
       if (core && coreIndex[core]) return coreIndex[core];
+      var loose = looseProductName(name);
+      if (loose && looseIndex[loose]) return looseIndex[loose];
       return barcode;
     }
     state.outboundBatches.forEach(function (batch) {
