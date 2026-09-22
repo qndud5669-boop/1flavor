@@ -701,6 +701,13 @@
         if (r.date && r.date >= cutoff) map[key].recent7d += r.qty;
         if (r.date && r.date >= cutoff30) map[key].recent30d += r.qty;
         if (r.name && !map[key].name) map[key].name = r.name;
+        // 현재고/소비기한을 화면에서 수기로 고쳐둔 시점(setAt) 이후에 찍힌 출고만 따로 집계해둠 -
+        // 수기 수정값은 "그 시점의 실제 수량"이므로, 그 이후 출고분만 거기서 계속 빼줘야 함.
+        var stockEdit = state.manualStock && state.manualStock[key];
+        var stockSetAt = stockEdit && typeof stockEdit === "object" ? stockEdit.setAt : null;
+        if (r.date && stockSetAt && r.date > stockSetAt) map[key].outboundSinceStockEdit = (map[key].outboundSinceStockEdit || 0) + r.qty;
+        var expirySetAt = state.expiryCorrectedAt && state.expiryCorrectedAt[key];
+        if (r.date && expirySetAt && r.date > expirySetAt) map[key].outboundSinceExpiryEdit = (map[key].outboundSinceExpiryEdit || 0) + r.qty;
       });
     });
     state.inboundBatches.forEach(function (batch) {
@@ -709,6 +716,10 @@
         if (!map[key]) map[key] = { barcode: key, name: r.name, baseline: 0, warnQty: 0, dangerQty: 0, outbound: 0, inbound: 0, recent7d: 0, recent30d: 0, expiries: [] };
         map[key].inbound += r.qty;
         if (r.name && !map[key].name) map[key].name = r.name;
+        // 입고쪽 r.date는 "No." 컬럼이라 실제 날짜가 아님 - 대신 파일 첨부일(batch.uploadedAt) 기준으로 판단
+        var stockEdit2 = state.manualStock && state.manualStock[key];
+        var stockSetAt2 = stockEdit2 && typeof stockEdit2 === "object" ? stockEdit2.setAt : null;
+        if (stockSetAt2 && batch.uploadedAt > stockSetAt2) map[key].inboundSinceStockEdit = (map[key].inboundSinceStockEdit || 0) + r.qty;
         if (r.expiry) {
           map[key].expiries.push({ date: r.expiry, qty: r.qty });
         } else if (r.lots && r.lots.length) {
@@ -731,9 +742,15 @@
         var v = map[k];
         v.remaining = v.baseline - v.outbound + v.inbound;
         v.autoRemaining = v.remaining;
-        // 화면에서 직접 수정한 현재고(state.manualStock)가 있으면 그 값으로 덮어씀
+        // 화면에서 직접 수정한 현재고(state.manualStock)가 있으면, 그 수정값을 새 기준점으로 삼아
+        // 그 이후에 찍힌 출고/입고만 반영함(수정한 시점 이전 출고까지 또 빼면 이중차감이 됨)
         if (state.manualStock && state.manualStock[v.barcode] !== undefined) {
-          v.remaining = state.manualStock[v.barcode];
+          var se = state.manualStock[v.barcode];
+          if (se && typeof se === "object") {
+            v.remaining = se.qty - (v.outboundSinceStockEdit || 0) + (v.inboundSinceStockEdit || 0);
+          } else {
+            v.remaining = se; // 구버전 데이터(날짜 없이 숫자만 저장된 경우) 호환용
+          }
           v.stockOverridden = true;
         }
         // 품절/위험: 최근 1주일 출고량을 앞으로 1주일 예상 수요로 보고, 남은재고가 그보다 적으면 위험
@@ -766,7 +783,9 @@
           missingQtyLots[0].qty = grossTotal - knownGrossSum;
         }
         // 출고는 소비기한이 가장 빠른 로트부터 순서대로 차감(선입선출) - 로트별 합이 항상 현재고와 일치하도록 유지
-        var toConsume = v.outbound;
+        // 소비기한을 화면에서 수기로 고친 적이 있으면, 그 시점 이후 출고분만 차감함(고친 시점 이전 출고까지 또 빼면 이중차감)
+        var expiryFixAt = state.expiryCorrectedAt && state.expiryCorrectedAt[v.barcode];
+        var toConsume = expiryFixAt ? (v.outboundSinceExpiryEdit || 0) : v.outbound;
         v.expiries.forEach(function (lot) {
           if (lot.qty == null || toConsume <= 0) return;
           var deduct = Math.min(lot.qty, toConsume);
@@ -908,6 +927,13 @@
   // ---------- 소비기한 편집 모달 ----------
   var editingBarcode = null;
 
+  // 소비기한을 수기로 고친 시점을 품목별로 기록 - computeStock()에서 그 시점 이후 출고분만
+  // 선입선출 차감에 반영하도록 쓰임(안 그러면 고치기 전 출고까지 또 빠져서 이중차감됨)
+  function markExpiryCorrected(barcode) {
+    if (!state.expiryCorrectedAt) state.expiryCorrectedAt = {};
+    state.expiryCorrectedAt[barcode] = todayLabel();
+  }
+
   function openExpiryModal(barcode) {
     editingBarcode = barcode;
     if (!state.manualExpiry) state.manualExpiry = {};
@@ -950,6 +976,7 @@
     var qtyVal = document.getElementById("expiry-new-qty").value.trim();
     if (!isValidDateStr(dateVal)) { alert("날짜는 YY.MM.DD 형식으로 입력해주세요 (예: 27.03.15)"); return; }
     state.manualExpiry[editingBarcode].push({ date: dateVal, qty: qtyVal ? Number(qtyVal) : null });
+    markExpiryCorrected(editingBarcode);
     document.getElementById("expiry-new-date").value = "";
     document.getElementById("expiry-new-qty").value = "";
     renderExpiryModalList();
@@ -966,6 +993,7 @@
     var target = lots[idx];
     var realIdx = state.manualExpiry[editingBarcode].indexOf(target);
     if (realIdx !== -1) state.manualExpiry[editingBarcode].splice(realIdx, 1);
+    markExpiryCorrected(editingBarcode);
     renderExpiryModalList();
     persist();
   });
@@ -992,7 +1020,7 @@
     var val = document.getElementById("stock-new-qty").value.trim();
     if (val === "" || isNaN(Number(val))) { alert("숫자를 입력해주세요."); return; }
     if (!state.manualStock) state.manualStock = {};
-    state.manualStock[editingStockBarcode] = Number(val);
+    state.manualStock[editingStockBarcode] = { qty: Number(val), setAt: todayLabel() };
     closeStockModal();
     renderAll(); persist();
   });
