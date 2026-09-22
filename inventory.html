@@ -249,6 +249,12 @@
   .lot-row { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
   .lot-row .lot-date { font-family: "Inter", "Noto Sans KR", sans-serif; font-variant-numeric: tabular-nums; font-size: 13px; flex: 1; }
   .lot-row .lot-qty { font-size: 12px; color: var(--ink-faint); }
+  .lot-row .lot-qty-input {
+    width: 76px; padding: 6px 8px; border-radius: 7px; border: 1.5px solid var(--border); background: var(--surface-sunken);
+    color: var(--ink); font-size: 12.5px; text-align: right; transition: border-color .15s;
+  }
+  .lot-row .lot-qty-input:focus { border-color: var(--accent); outline: none; }
+  .lot-row .lot-source { font-size: 10.5px; color: var(--ink-faint); margin-left: 4px; }
   .lot-remove { font-size: 16px; line-height: 1; color: var(--danger); background: none; border: none; cursor: pointer; padding: 3px 7px; border-radius: 6px; transition: background .15s; }
   .lot-remove:hover { background: var(--danger-soft); }
   .lot-empty { font-size: 12.5px; color: var(--ink-faint); padding: 10px 0; }
@@ -764,13 +770,15 @@
         else if (v.warnRisk) v.status = "warn";
         else v.status = "ok";
 
-        // 화면에서 직접 관리하는 소비기한(state.manualExpiry)은 계산된(입고 엑셀 기반) 값에 합쳐서 보여줌
-        // (날짜가 겹치면 실제 입고 데이터 쪽을 우선하고, 수기로만 등록된 날짜는 추가로 표시)
+        // 화면에서 직접 관리하는 소비기한(state.manualExpiry)은 계산된(입고 엑셀 기반) 값 위에 덮어씀
+        // (같은 날짜가 이미 자동계산돼 있어도 수기로 고친 값이 항상 우선함 - 선입선출이 아닌 로트에서
+        //  출고됐을 때 그 로트만 직접 고칠 수 있어야 하므로)
         if (state.manualExpiry && state.manualExpiry[v.barcode] && state.manualExpiry[v.barcode].length) {
-          var haveDates = v.expiries.map(function (e) { return e.date; });
           state.manualExpiry[v.barcode].forEach(function (e) {
+            var existing = v.expiries.filter(function (x) { return x.date === e.date; })[0];
             // 반드시 복사본을 넣어야 함 - 원본을 그대로 넣으면 아래 선입선출 차감이 저장된 state.manualExpiry 원본까지 그대로 바꿔버림
-            if (haveDates.indexOf(e.date) === -1) v.expiries.push({ date: e.date, qty: e.qty });
+            if (existing) existing.qty = e.qty;
+            else v.expiries.push({ date: e.date, qty: e.qty });
           });
         }
         v.expiries.sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
@@ -934,6 +942,17 @@
     state.expiryCorrectedAt[barcode] = todayLabel();
   }
 
+  // 특정 날짜의 소비기한 수량을 수기로 고정값으로 박아넣음(자동계산값이든 기존 수기값이든 덮어씀).
+  // 선입선출이 아닌 로트에서 출고된 경우 이걸로 그 로트만 직접 고치면 됨.
+  function upsertManualExpiry(barcode, date, qty) {
+    if (!state.manualExpiry) state.manualExpiry = {};
+    if (!state.manualExpiry[barcode]) state.manualExpiry[barcode] = [];
+    var existing = state.manualExpiry[barcode].filter(function (e) { return e.date === date; })[0];
+    if (existing) existing.qty = qty;
+    else state.manualExpiry[barcode].push({ date: date, qty: qty });
+    markExpiryCorrected(barcode);
+  }
+
   function openExpiryModal(barcode) {
     editingBarcode = barcode;
     if (!state.manualExpiry) state.manualExpiry = {};
@@ -953,17 +972,22 @@
     renderStock();
   }
 
+  // 자동계산 로트 + 수기로 고친 로트를 합친, 실제 화면(상품행)에 보이는 것과 똑같은 현재 상태를 기준으로 그림.
+  // 이래야 "선입선출로 자동차감된" 로트도 여기서 바로 수량을 고칠 수 있음(예전엔 수기로 등록한 로트만 보였음).
   function renderExpiryModalList() {
-    var lots = (state.manualExpiry[editingBarcode] || []).slice().sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
+    var stock = computeStock();
+    var item = stock.filter(function (i) { return i.barcode === editingBarcode; })[0];
+    var lots = item ? item.expiries.slice().sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); }) : [];
     var list = document.getElementById("expiry-lot-list");
     if (lots.length === 0) {
       list.innerHTML = '<div class="lot-empty">등록된 소비기한이 없습니다.</div>';
       return;
     }
-    list.innerHTML = lots.map(function (lot, i) {
+    list.innerHTML = lots.map(function (lot) {
+      var qtyVal = lot.qty === null || lot.qty === undefined ? "" : lot.qty;
       return '<div class="lot-row"><span class="lot-date">' + lot.date + '</span>' +
-        '<span class="lot-qty">' + (lot.qty === null || lot.qty === undefined ? "" : lot.qty + "개") + '</span>' +
-        '<button type="button" class="lot-remove" data-remove-lot="' + i + '">×</button></div>';
+        '<input type="number" class="lot-qty-input" data-edit-lot-date="' + lot.date + '" value="' + qtyVal + '" placeholder="수량">' +
+        '<button type="button" class="lot-remove" data-remove-lot-date="' + lot.date + '">×</button></div>';
     }).join("");
   }
 
@@ -975,8 +999,7 @@
     var dateVal = document.getElementById("expiry-new-date").value.trim();
     var qtyVal = document.getElementById("expiry-new-qty").value.trim();
     if (!isValidDateStr(dateVal)) { alert("날짜는 YY.MM.DD 형식으로 입력해주세요 (예: 27.03.15)"); return; }
-    state.manualExpiry[editingBarcode].push({ date: dateVal, qty: qtyVal ? Number(qtyVal) : null });
-    markExpiryCorrected(editingBarcode);
+    upsertManualExpiry(editingBarcode, dateVal, qtyVal ? Number(qtyVal) : null);
     document.getElementById("expiry-new-date").value = "";
     document.getElementById("expiry-new-qty").value = "";
     renderExpiryModalList();
@@ -985,15 +1008,22 @@
 
   document.getElementById("expiry-modal-close").addEventListener("click", closeExpiryModal);
 
+  // 로트 수량 칸을 직접 고치면(포커스를 벗어날 때) 바로 저장됨 - 선입선출이 아닌 로트에서 나간 경우를 위한 기능
+  document.getElementById("expiry-lot-list").addEventListener("change", function (e) {
+    var input = e.target.closest("[data-edit-lot-date]");
+    if (!input || !editingBarcode) return;
+    var val = input.value.trim();
+    upsertManualExpiry(editingBarcode, input.dataset.editLotDate, val === "" ? null : Number(val));
+    renderExpiryModalList();
+    persist();
+  });
+
   document.getElementById("expiry-lot-list").addEventListener("click", function (e) {
-    var btn = e.target.closest("[data-remove-lot]");
+    var btn = e.target.closest("[data-remove-lot-date]");
     if (!btn || !editingBarcode) return;
-    var idx = Number(btn.dataset.removeLot);
-    var lots = state.manualExpiry[editingBarcode].slice().sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); });
-    var target = lots[idx];
-    var realIdx = state.manualExpiry[editingBarcode].indexOf(target);
-    if (realIdx !== -1) state.manualExpiry[editingBarcode].splice(realIdx, 1);
-    markExpiryCorrected(editingBarcode);
+    // 자동계산 로트도 있을 수 있어서(state.manualExpiry에 실제로 없을 수도 있음) 배열에서 지우는 대신
+    // 수량 0으로 고정값을 박아서 항상 안 보이게 함
+    upsertManualExpiry(editingBarcode, btn.dataset.removeLotDate, 0);
     renderExpiryModalList();
     persist();
   });
